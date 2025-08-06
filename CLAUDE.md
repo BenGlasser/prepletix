@@ -78,3 +78,7 @@ The app uses Firebase services:
 - Authentication required for all app access
 - Firestore security rules scope access to authenticated users
 - Player data protected and associated with coach accounts
+
+## Design Guidelines
+
+- Use heroicons for all iconography

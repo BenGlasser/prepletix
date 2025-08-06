@@ -18,9 +18,37 @@ export class Player {
       name: this.name,
       jerseyNumber: this.jerseyNumber,
       photoUrl: this.photoUrl,
-      contacts: this.contacts,
-      medicalInfo: this.medicalInfo,
-      notes: this.notes,
+      contacts: this.contacts.map(contact => ({
+        name: contact.name,
+        relationship: contact.relationship,
+        phone: contact.phone,
+        email: contact.email,
+        isPrimary: contact.isPrimary
+      })),
+      medicalInfo: {
+        allergies: this.medicalInfo.allergies || [],
+        medications: this.medicalInfo.medications || [],
+        conditions: this.medicalInfo.conditions || [],
+        emergencyContact: this.medicalInfo.emergencyContact ? {
+          name: this.medicalInfo.emergencyContact.name,
+          relationship: this.medicalInfo.emergencyContact.relationship,
+          phone: this.medicalInfo.emergencyContact.phone,
+          email: this.medicalInfo.emergencyContact.email,
+          isPrimary: this.medicalInfo.emergencyContact.isPrimary
+        } : null,
+        physicianName: this.medicalInfo.physicianName || '',
+        physicianPhone: this.medicalInfo.physicianPhone || '',
+        insuranceProvider: this.medicalInfo.insuranceProvider || '',
+        notes: this.medicalInfo.notes || ''
+      },
+      notes: this.notes.map(note => ({
+        id: note.id,
+        content: note.content,
+        category: note.category,
+        isPrivate: note.isPrivate,
+        createdAt: note.createdAt,
+        createdBy: note.createdBy
+      })),
       createdAt: this.createdAt,
       updatedAt: new Date()
     };

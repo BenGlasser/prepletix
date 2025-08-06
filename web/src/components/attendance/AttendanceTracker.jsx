@@ -140,8 +140,12 @@ export default function AttendanceTracker() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading players...</div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="flex justify-center items-center min-h-[50vh]">
+          <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 dark:border-gray-700/50">
+            <div className="text-gray-600 dark:text-gray-400">Loading players...</div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -149,12 +153,13 @@ export default function AttendanceTracker() {
   const counts = getAttendanceCounts();
 
   return (
-    <div className="p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50">
           {/* Header */}
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Attendance Tracker</h2>
+          <div className="p-8 border-b border-gray-200/50 dark:border-gray-700/50">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Attendance Tracker</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Track player attendance for practices and games</p>
             
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <div className="flex space-x-4">
@@ -188,9 +193,12 @@ export default function AttendanceTracker() {
               <button
                 onClick={saveAttendance}
                 disabled={saving}
-                className="bg-primary-600 text-white px-6 py-2 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-3 rounded-2xl hover:from-primary-700 hover:to-primary-800 flex items-center space-x-2 shadow-lg shadow-primary-600/25 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
               >
-                {saving ? 'Saving...' : 'Save Attendance'}
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span>{saving ? 'Saving...' : 'Save Attendance'}</span>
               </button>
             </div>
 

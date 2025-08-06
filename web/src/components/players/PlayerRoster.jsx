@@ -96,49 +96,63 @@ export default function PlayerRoster() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Team Roster</h2>
-        <button
-          onClick={handleAddPlayer}
-          className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 flex items-center space-x-2"
-        >
-          <span>+</span>
-          <span>Add Player</span>
-        </button>
-      </div>
-
-      
-      {players.length === 0 && (
-        <>
-          <DataSeeder />
-          <ColorShowcase />
-        </>
-      )}
-
-      {players.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-500 dark:text-gray-400 mb-4">No players added yet</div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Team Roster</h2>
+            <p className="text-gray-600 dark:text-gray-400">Manage your team players and their information</p>
+          </div>
           <button
             onClick={handleAddPlayer}
-            className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700"
+            className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-3 rounded-2xl hover:from-primary-700 hover:to-primary-800 flex items-center space-x-2 shadow-lg shadow-primary-600/25 transition-all duration-200 hover:scale-105"
           >
-            Add Your First Player
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            <span>Add Player</span>
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {players.map((player) => (
-            <PlayerCard
-              key={player.id}
-              player={player}
-              onClick={() => handlePlayerClick(player)}
-              onEdit={() => handleEditPlayer(player)}
-              onDelete={() => handleDeletePlayer(player.id)}
-            />
-          ))}
-        </div>
-      )}
+
+        {players.length === 0 && (
+          <>
+            <DataSeeder />
+            <ColorShowcase />
+          </>
+        )}
+
+        {players.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-3xl p-12 border border-gray-200/50 dark:border-gray-700/50 max-w-md mx-auto">
+              <div className="w-16 h-16 bg-gradient-to-r from-primary-600 to-secondary-400 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Players Yet</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">Start building your team by adding your first player</p>
+              <button
+                onClick={handleAddPlayer}
+                className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-3 rounded-2xl hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-600/25"
+              >
+                Add Your First Player
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {players.map((player) => (
+              <PlayerCard
+                key={player.id}
+                player={player}
+                onClick={() => handlePlayerClick(player)}
+                onEdit={() => handleEditPlayer(player)}
+                onDelete={() => handleDeletePlayer(player.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
