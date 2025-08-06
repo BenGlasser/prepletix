@@ -1,0 +1,110 @@
+# 🧬 Data Models (Expanded for MVP)
+
+--- 
+
+Player {
+  id: string                     # Unique identifier for the player
+  name: string                   # Full name
+  jerseyNumber: number           # Player's jersey number
+  photoUrl: string               # URL to player profile photo
+  birthDate: string              # ISO 8601 format (YYYY-MM-DD)
+  position: string               # Optional: e.g. "Midfield", "Goalie"
+  contacts: [ParentContact]      # One or more parent/guardian contacts
+  medicalInfo: MedicalInfo       # Allergies, conditions, etc.
+  notes: [CoachNote]             # Freeform notes from coaches
+  attendance: [AttendanceRecord] # List of attendance entries
+  createdAt: string              # Timestamp (ISO format)
+  updatedAt: string              # Timestamp (ISO format)
+}
+
+ParentContact {
+  name: string              # Full name of parent or guardian
+  relationship: string      # e.g. "Mother", "Father", "Guardian"
+  phone: string             # Mobile number
+  email: string             # Email address
+  preferredContact: string  # "phone", "email", or "either"
+}
+
+MedicalInfo {
+  allergies: string        # Freeform text
+  conditions: string       # e.g. asthma, epilepsy
+  emergencyContact: {
+    name: string
+    phone: string
+    relationship: string
+  }
+}
+
+CoachNote {
+  id: string
+  date: string             # ISO 8601 format
+  author: string           # Coach user ID or name
+  text: string             # The note content
+  tags: [string]           # Optional: e.g. ["teamwork", "focus"]
+}
+
+AttendanceRecord {
+  date: string             # ISO 8601 (YYYY-MM-DD)
+  eventType: string        # "practice" or "game"
+  eventId: string          # Reference to the event
+  status: string           # "present", "late", "absent", "left_early"
+  note: string             # Optional: e.g. "Sick", "Dentist"
+}
+
+---
+
+PracticePlan {
+  id: string
+  date: string             # ISO 8601 format
+  focus: string            # e.g. "Shooting", "Ground Balls"
+  drills: [PracticeDrill]  # Timed list of drills
+  duration: number         # Total duration in minutes
+  createdBy: string        # Coach user ID
+  createdAt: string
+  updatedAt: string
+}
+
+PracticeDrill {
+  drill: Drill             # Embedded drill or reference
+  start: string            # Start time (e.g. "16:00")
+  end: string              # End time (e.g. "16:10")
+}
+
+---
+
+Drill {
+  id: string
+  title: string
+  category: string         # e.g. "passing", "shooting", "defense"
+  ageRange: string         # e.g. "6–8", "9–12"
+  mediaUrl: string         # Image or video link
+  instructions: string     # Step-by-step drill guide
+  difficulty: string        # e.g. "Beginner", "Intermediate"
+  tags: [string]           # e.g. ["warm-up", "1v1"]
+}
+
+---
+
+Game {
+  id: string
+  date: string             # ISO 8601
+  time: string             # HH:MM format
+  opponent: string         # Opponent team name
+  location: string         # Field/stadium name or address
+  notes: string            # Additional notes or reminders
+  createdBy: string        # Coach user ID
+  createdAt: string
+  updatedAt: string
+}
+
+---
+
+Message {
+  id: string
+  sender: string           # Coach user ID
+  recipients: [string]     # User IDs (parents, coaches)
+  body: string             # Message content
+  timestamp: string        # ISO 8601
+  type: string             # "announcement", "reminder", "direct"
+  scheduledFor: string     # Optional: future send timestamp
+}

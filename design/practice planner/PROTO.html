@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lacrosse App Prototype - Practice Planner</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f4f4f4;
+      }
+      header {
+        background: #333;
+        color: white;
+        padding: 1rem;
+        text-align: center;
+      }
+      .container {
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      .sidebar {
+        flex: 1;
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+      }
+      .main {
+        flex: 3;
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        position: relative;
+      }
+      h2 {
+        margin-top: 0;
+      }
+      .drill {
+        border: 1px dashed #ccc;
+        padding: 0.5rem;
+        margin: 0.5rem 0;
+        background: #fafafa;
+        cursor: grab;
+      }
+      .practice-slot {
+        border: 2px solid #ddd;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        min-height: 60px;
+        background-color: #fff;
+      }
+      .practice-slot h3 {
+        margin: 0 0 0.5rem 0;
+      }
+      .practice-slot.over {
+        background-color: #e0f7fa;
+        border-color: #00acc1;
+      }
+      .save-btn {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+        background-color: #00796b;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        z-index: 1000;
+      }
+      .save-btn:hover {
+        background-color: #004d40;
+      }
+      @media (max-width: 768px) {
+        .container {
+          flex-direction: column;
+        }
+        .sidebar,
+        .main {
+          flex: 1 1 100%;
+          padding: 0.75rem;
+        }
+        header h1 {
+          font-size: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Practice Planner (Prototype)</h1>
+    </header>
+
+    <div class="container">
+      <div class="sidebar">
+        <h2>Drill Library</h2>
+        <div
+          class="drill"
+          draggable="true"
+          data-id="d1"
+          data-category="warm-up"
+          data-age="6-10"
+          data-media-url=""
+          data-instructions="Jog laps around field"
+        >
+          Warm-up Laps
+        </div>
+        <div
+          class="drill"
+          draggable="true"
+          data-id="d2"
+          data-category="passing"
+          data-age="6-10"
+          data-media-url=""
+          data-instructions="Pass back and forth"
+        >
+          Passing Pairs
+        </div>
+        <div
+          class="drill"
+          draggable="true"
+          data-id="d3"
+          data-category="ground ball"
+          data-age="6-10"
+          data-media-url=""
+          data-instructions="Relay race for ground balls"
+        >
+          Ground Ball Relay
+        </div>
+        <div
+          class="drill"
+          draggable="true"
+          data-id="d4"
+          data-category="shooting"
+          data-age="6-10"
+          data-media-url=""
+          data-instructions="Shoot from 10 yards"
+        >
+          Shooting Drill
+        </div>
+        <div
+          class="drill"
+          draggable="true"
+          data-id="d5"
+          data-category="scrimmage"
+          data-age="6-10"
+          data-media-url=""
+          data-instructions="Play short game"
+        >
+          Scrimmage
+        </div>
+      </div>
+
+      <div class="main">
+        <h2>Today's Practice Plan</h2>
+        <div
+          class="practice-slot"
+          data-start="0"
+          data-end="10"
+          ondragover="allowDrop(event)"
+          ondrop="drop(event)"
+        >
+          <h3>0–10 mins</h3>
+          <p>Drag a drill here</p>
+        </div>
+        <div
+          class="practice-slot"
+          data-start="10"
+          data-end="20"
+          ondragover="allowDrop(event)"
+          ondrop="drop(event)"
+        >
+          <h3>10–20 mins</h3>
+          <p>Drag a drill here</p>
+        </div>
+        <div
+          class="practice-slot"
+          data-start="20"
+          data-end="30"
+          ondragover="allowDrop(event)"
+          ondrop="drop(event)"
+        >
+          <h3>20–30 mins</h3>
+          <p>Drag a drill here</p>
+        </div>
+        <div
+          class="practice-slot"
+          data-start="30"
+          data-end="45"
+          ondragover="allowDrop(event)"
+          ondrop="drop(event)"
+        >
+          <h3>30–45 mins</h3>
+          <p>Drag a drill here</p>
+        </div>
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="savePlan()">Save Plan</button>
+
+    <script>
+      let dragged;
+
+      document.querySelectorAll(".drill").forEach((item) => {
+        item.addEventListener("dragstart", (event) => {
+          dragged = event.target;
+        });
+      });
+
+      function allowDrop(event) {
+        event.preventDefault();
+        event.currentTarget.classList.add("over");
+      }
+
+      function drop(event) {
+        event.preventDefault();
+        const target = event.currentTarget;
+        target.classList.remove("over");
+        if (dragged) {
+          const clone = dragged.cloneNode(true);
+          clone.setAttribute("draggable", "false");
+          target.innerHTML = "";
+          target.appendChild(clone);
+        }
+      }
+
+      function savePlan() {
+        const slots = document.querySelectorAll(".practice-slot");
+        const plan = {
+          id: "practice-" + new Date().getTime(),
+          date: new Date().toISOString(),
+          duration: 45,
+          focus: "General Skills",
+          drills: [],
+        };
+
+        slots.forEach((slot) => {
+          const drillEl = slot.querySelector(".drill");
+          if (drillEl) {
+            plan.drills.push({
+              start: parseInt(slot.dataset.start),
+              end: parseInt(slot.dataset.end),
+              drill: {
+                id: drillEl.dataset.id,
+                title: drillEl.textContent,
+                category: drillEl.dataset.category,
+                ageRange: drillEl.dataset.age,
+                mediaUrl: drillEl.dataset.mediaUrl,
+                instructions: drillEl.dataset.instructions,
+              },
+            });
+          }
+        });
+
+        alert("Practice Plan Saved:\n" + JSON.stringify(plan, null, 2));
+      }
+    </script>
+  </body>
+</html>
+.
