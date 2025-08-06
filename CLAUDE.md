@@ -19,26 +19,17 @@ The app uses Firebase as the backend service including Firestore (database), Aut
 ## Development Commands
 
 ### Web Application (web/)
+
 ```bash
 cd web
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run lint         # Run ESLint
-npm run preview      # Preview production build
-```
-
-### Mobile Application (mobile/)
-```bash
-cd mobile
-npm start            # Start Expo development server
-npm run android      # Start on Android emulator
-npm run ios          # Start on iOS simulator  
-npm run web          # Start web version
-npm run lint         # Run Expo lint
-npm run reset-project # Reset to blank project
+yarn run dev          # Start development server
+yarn run build        # Build for production
+yarn run lint         # Run ESLint
+yarn run preview      # Preview production build
 ```
 
 ### Firebase Functions (functions/)
+
 ```bash
 cd functions
 npm run serve        # Start Firebase emulator
@@ -51,6 +42,7 @@ npm run logs         # View function logs
 ## Data Models
 
 ### Core Entities
+
 - **Player** - Central entity with name, jersey number, contacts, medical info, notes, and attendance records
 - **AttendanceRecord** - Tracks presence status (present/absent/late/left_early) with optional notes
 - **PracticePlan** - Contains drills with timing and focus areas
@@ -59,12 +51,14 @@ npm run logs         # View function logs
 - **Message** - Communication between coaches and parents
 
 ### Key Collections (Firestore)
+
 - `/players/{playerId}` - Player profiles and core information
 - `/players/{playerId}/attendance/{recordId}` - Attendance tracking records
 
 ## MVP Features
 
 The current MVP focuses on three core features:
+
 1. **Player Roster & Profiles** - Display and manage player information
 2. **Player CRUD Operations** - Add, edit, delete players with profile photos
 3. **Attendance Tracker** - Mark attendance status with optional notes
@@ -72,6 +66,7 @@ The current MVP focuses on three core features:
 ## Firebase Configuration
 
 The app uses Firebase services:
+
 - **Authentication** - Email/password login for coaches
 - **Firestore** - NoSQL database for all app data
 - **Hosting** - Web app deployment

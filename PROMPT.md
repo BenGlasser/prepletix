@@ -11,13 +11,13 @@ Use the following technologies and services:
 - **Database:** Firestore (Firebase Cloud Firestore)
 - **Auth:** Firebase Authentication (email/password only for MVP)
 - **Hosting:** Firebase Hosting
-- **Target Platforms:** Android, iOS (via PWA), Chrome (PWA support)
+- \*\*Target Platforms: Web
 
 ---
 
 ### ✅ TASKS — Firebase Console Setup
 
-1. Create a **Firebase Project** called `prepletix-mvp`
+1. Create a **Firebase Project** called `prepletix`
 2. Set up:
    - Firestore in production mode
    - Firebase Authentication (email/password)
@@ -47,10 +47,21 @@ Build only the following for MVP:
    - Save to Firestore under `players` collection
 
 3. **Attendance Tracker**
+
    - Toggle attendance for each player
    - Status: Present, Absent, Late, Left Early
    - Optional notes
    - Save to subcollection: `/players/{playerId}/attendance/`
+
+4. **Practice Planner**
+   - Create/edit/save practice plans
+   - Drag-and-drop drill layout
+   - Time slots (e.g. 10 min warm-up, 15 min stick work)
+   - Tag practices by date and focus (e.g. shooting, teamwork)
+   - Ability to duplicate and reuse plans
+   - Practice calendar view
+   - Practice editor with list of available drills
+   - Option to print or view in full-screen for field use
 
 ---
 

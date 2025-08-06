@@ -1,35 +1,80 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect, Suspense, lazy } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase';
+import { ThemeProvider } from './contexts/ThemeContext';
+import AuthWrapper from './components/auth/AuthWrapper';
+import Navigation from './components/layout/Navigation';
+
+// Lazy load the main components
+const PlayerRoster = lazy(() => import('./components/players/PlayerRoster'));
+const AttendanceTracker = lazy(() => import('./components/attendance/AttendanceTracker'));
+const PracticePlanner = lazy(() => import('./components/practice/PracticePlanner'));
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('players');
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <ThemeProvider>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
+          <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+        </div>
+      </ThemeProvider>
+    );
+  }
+
+  if (!user) {
+    return (
+      <ThemeProvider>
+        <AuthWrapper />
+      </ThemeProvider>
+    );
+  }
+
+  const renderActiveComponent = () => {
+    switch (activeTab) {
+      case 'players':
+        return <PlayerRoster />;
+      case 'attendance':
+        return <AttendanceTracker />;
+      case 'practice':
+        return <PracticePlanner />;
+      default:
+        return <PlayerRoster />;
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <ThemeProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+        <Navigation 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          user={user}
+        />
+        <main>
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-8">
+              <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+            </div>
+          }>
+            {renderActiveComponent()}
+          </Suspense>
+        </main>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </ThemeProvider>
+  );
 }
 
-export default App
+export default App;
