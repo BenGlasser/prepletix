@@ -1,10 +1,11 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { TeamService } from '../services/teamService';
 import { Team } from '../models/Team';
 
 const TeamContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTeam() {
   const context = useContext(TeamContext);
   if (!context) {
@@ -28,9 +29,9 @@ export function TeamProvider({ children }) {
     return team;
   };
 
-  const ensureTeamInstances = (teamArray) => {
+  const ensureTeamInstances = useCallback((teamArray) => {
     return teamArray.map(ensureTeamInstance);
-  };
+  }, []);
 
   // Load teams for the current user
   useEffect(() => {
@@ -41,7 +42,7 @@ export function TeamProvider({ children }) {
       setCurrentTeam(null);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, loadUserTeams]);
 
   // Set current team from localStorage or first team
   useEffect(() => {
@@ -61,7 +62,7 @@ export function TeamProvider({ children }) {
     }
   }, [currentTeam]);
 
-  const loadUserTeams = async () => {
+  const loadUserTeams = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -73,7 +74,7 @@ export function TeamProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.uid, ensureTeamInstances]);
 
   const createTeam = async (teamData) => {
     try {
@@ -131,7 +132,7 @@ export function TeamProvider({ children }) {
   const joinTeamWithInvitation = async (invitationCode) => {
     try {
       setError(null);
-      const team = await TeamService.useInvitation(invitationCode, {
+      const team = await TeamService.applyInvitation(invitationCode, {
         uid: user.uid,
         email: user.email,
         name: user.displayName || user.email

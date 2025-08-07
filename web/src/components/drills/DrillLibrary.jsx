@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, or } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../../firebase';
 import { useTeam } from '../../contexts/TeamContext';
@@ -42,7 +42,7 @@ export default function DrillLibrary() {
     if (currentTeam && !teamLoading) {
       loadDrills();
     }
-  }, [currentTeam, teamLoading]);
+  }, [currentTeam, teamLoading, loadDrills]);
 
   useEffect(() => {
     // Handle URL parameters for specific drill focus
@@ -68,7 +68,7 @@ export default function DrillLibrary() {
     }
   }, [drillId, drills]);
 
-  const loadDrills = async () => {
+  const loadDrills = useCallback(async () => {
     if (!currentTeam) return;
     
     try {
@@ -91,7 +91,7 @@ export default function DrillLibrary() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentTeam]);
 
   // Filter functions
   const getUniqueCategories = () => {
@@ -318,7 +318,7 @@ export default function DrillLibrary() {
     if (!url) return null;
     
     // YouTube URL patterns
-    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(youtubeRegex);
     return match ? match[1] : null;
   };

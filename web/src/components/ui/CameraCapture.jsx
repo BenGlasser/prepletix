@@ -39,7 +39,7 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
       try {
         newStream = await navigator.mediaDevices.getUserMedia(constraints);
         console.log('✓ Camera stream obtained with basic constraints');
-      } catch (basicError) {
+      } catch {
         console.log('Basic constraints failed, trying with facingMode:', facingMode);
         constraints = {
           video: { facingMode },
@@ -215,15 +215,12 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
 
   // Start camera when component opens or facing mode changes
   useEffect(() => {
-    let mounted = true;
-    
     if (isOpen) {
       console.log('Starting camera, facing mode:', facingMode);
       startCamera();
     }
 
     return () => {
-      mounted = false;
       // Cleanup function to ensure camera is always stopped
       console.log('useEffect cleanup running, streamRef.current:', streamRef.current);
       
@@ -242,20 +239,22 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
       setStream(null);
       setError('');
       
-      // Also check video element
-      if (videoRef.current && videoRef.current.srcObject) {
+      // Copy ref to variable to avoid stale closure
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const videoElement = videoRef.current;
+      if (videoElement && videoElement.srcObject) {
         console.log('Cleanup: stopping stream from video element');
-        const videoStream = videoRef.current.srcObject;
+        const videoStream = videoElement.srcObject;
         if (videoStream && videoStream.getTracks) {
           videoStream.getTracks().forEach(track => {
             console.log('Cleanup stopping video track:', track.kind, track.readyState);
             track.stop();
           });
         }
-        videoRef.current.srcObject = null;
+        videoElement.srcObject = null;
       }
     };
-  }, [isOpen, facingMode]);
+  }, [isOpen, facingMode, startCamera]);
 
   // Additional cleanup on unmount - this is critical
   useEffect(() => {
@@ -269,13 +268,16 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
         streamRef.current = null;
       }
       
-      if (videoRef.current && videoRef.current.srcObject) {
+      // Copy ref to variable to avoid stale closure
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const videoElement = videoRef.current;
+      if (videoElement && videoElement.srcObject) {
         console.log('Force cleanup: stopping stream from video');
-        const videoStream = videoRef.current.srcObject;
+        const videoStream = videoElement.srcObject;
         if (videoStream && videoStream.getTracks) {
           videoStream.getTracks().forEach(track => track.stop());
         }
-        videoRef.current.srcObject = null;
+        videoElement.srcObject = null;
       }
     };
   }, []);

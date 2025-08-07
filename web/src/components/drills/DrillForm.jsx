@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { db, auth } from '../../firebase';
+import { db } from '../../firebase';
 import { Drill } from '../../models/PracticePlan';
 import { 
   XMarkIcon,
@@ -33,7 +33,6 @@ export default function DrillForm({ drill, onClose }) {
     maxPlayers: '',
     minPlayers: ''
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [equipmentInput, setEquipmentInput] = useState('');
   const [openSections, setOpenSections] = useState(new Set(['basic'])); // Start with basic info open
@@ -135,7 +134,6 @@ export default function DrillForm({ drill, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     try {
       const drillData = new Drill({
@@ -154,14 +152,12 @@ export default function DrillForm({ drill, onClose }) {
     } catch (error) {
       console.error('Error saving drill:', error);
       setError(error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
   const extractVideoId = (url) => {
     if (!url) return null;
-    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(youtubeRegex);
     return match ? match[1] : null;
   };

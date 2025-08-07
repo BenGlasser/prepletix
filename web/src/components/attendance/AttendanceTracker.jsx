@@ -17,7 +17,7 @@ export default function AttendanceTracker() {
   const [eventType, setEventType] = useState(EVENT_TYPES.PRACTICE);
   const [loading, setLoading] = useState(true);
 
-  const loadPlayers = async () => {
+  const loadPlayers = useCallback(async () => {
     if (!currentTeam) return;
     
     try {
@@ -41,7 +41,7 @@ export default function AttendanceTracker() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentTeam]);
 
   const loadAttendanceData = useCallback(async () => {
     const attendance = {};
@@ -85,7 +85,7 @@ export default function AttendanceTracker() {
     if (currentTeam && !teamLoading) {
       loadPlayers();
     }
-  }, [currentTeam, teamLoading]);
+  }, [currentTeam, teamLoading, loadPlayers]);
 
   useEffect(() => {
     if (players.length > 0) {

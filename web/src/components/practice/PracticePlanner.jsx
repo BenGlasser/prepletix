@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, deleteDoc, doc, getDoc, addDoc, query, where } from 'firebase/firestore';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase';
@@ -28,7 +28,7 @@ export default function PracticePlanner() {
     if (currentTeam && !teamLoading) {
       loadPracticePlans();
     }
-  }, [currentTeam, teamLoading]);
+  }, [currentTeam, teamLoading, loadPracticePlans]);
 
   useEffect(() => {
     // Handle URL parameters for editing specific plans
@@ -42,9 +42,9 @@ export default function PracticePlanner() {
       setShowForm(false);
       setEditingPlan(null);
     }
-  }, [planId]);
+  }, [planId, loadSpecificPlan]);
 
-  const loadSpecificPlan = async (id) => {
+  const loadSpecificPlan = useCallback(async (id) => {
     try {
       const planDoc = await getDoc(doc(db, 'practicePlans', id));
       if (planDoc.exists()) {
@@ -59,9 +59,9 @@ export default function PracticePlanner() {
       console.error('Error loading practice plan:', error);
       navigate('/practice'); // Redirect on error
     }
-  };
+  }, [navigate]);
 
-  const loadPracticePlans = async () => {
+  const loadPracticePlans = useCallback(async () => {
     if (!currentTeam) return;
     
     try {
@@ -80,7 +80,7 @@ export default function PracticePlanner() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentTeam]);
 
   const handleAddPlan = () => {
     setEditingPlan(null);

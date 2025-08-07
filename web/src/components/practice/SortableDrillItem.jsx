@@ -2,7 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
 
-export default function SortableDrillItem({ id, drill, index, isActive, onUpdate, onRemove, onShowDetails }) {
+export default function SortableDrillItem({ id, drill, onUpdate, onRemove, onShowDetails }) {
   const {
     attributes,
     listeners,

@@ -5,10 +5,8 @@ import {
   getDoc,
   addDoc, 
   updateDoc, 
-  deleteDoc, 
   query, 
-  where,
-  orderBy 
+  where
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Team, TeamInvitation } from '../models/Team';
@@ -175,8 +173,8 @@ export class TeamService {
     }
   }
 
-  // Use an invitation (mark as used and add coach to team)
-  static async useInvitation(invitationCode, coachData) {
+  // Apply an invitation (mark as used and add coach to team)
+  static async applyInvitation(invitationCode, coachData) {
     try {
       const invitation = await this.getInvitationByCode(invitationCode);
       

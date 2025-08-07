@@ -39,10 +39,6 @@ import {
 import SortableDrillItem from './SortableDrillItem';
 import DrillDetailsModal from '../drills/DrillDetailsModal';
 
-const focusAreas = [
-  'Warm-up', 'Stick Skills', 'Passing', 'Catching', 'Shooting', 'Ground Balls',
-  'Defense', 'Offense', 'Conditioning', 'Teamwork', 'Fun/Games', 'Cool Down'
-];
 
 export default function PracticePlanForm({ plan, onClose }) {
   const { currentTeam } = useTeam();
@@ -56,7 +52,6 @@ export default function PracticePlanForm({ plan, onClose }) {
     notes: ''
   });
   const [availableDrills, setAvailableDrills] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [openSections, setOpenSections] = useState(new Set(['drills'])); // Start with drills open
   const [activeId, setActiveId] = useState(null);
@@ -165,7 +160,6 @@ export default function PracticePlanForm({ plan, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     try {
       const practicePlan = new PracticePlan({
@@ -191,8 +185,6 @@ export default function PracticePlanForm({ plan, onClose }) {
     } catch (error) {
       console.error('Error saving practice plan:', error);
       setError(error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -224,16 +216,6 @@ export default function PracticePlanForm({ plan, onClose }) {
     autoSave();
   };
 
-  const handleFocusToggle = (focus) => {
-    setFormData(prev => ({
-      ...prev,
-      focus: prev.focus.includes(focus)
-        ? prev.focus.filter(f => f !== focus)
-        : [...prev.focus, focus]
-    }));
-    // Auto-save focus changes with debounce
-    debouncedAutoSave();
-  };
 
   const addDrillToPlan = (drill) => {
     const newDrillSlot = new DrillSlot({

@@ -16,7 +16,6 @@ export default function TeamSetup() {
   const { teams, joinTeamWithInvitation, loading, error } = useTeam();
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [invitationStatus, setInvitationStatus] = useState('checking'); // checking, valid, invalid, used
-  const [invitationTeam, setInvitationTeam] = useState(null);
   const [manualInvitationCode, setManualInvitationCode] = useState('');
   const [showInvitationInput, setShowInvitationInput] = useState(false);
 
@@ -53,7 +52,7 @@ export default function TeamSetup() {
       setTimeout(() => {
         navigate('/players');
       }, 2000);
-    } catch (error) {
+    } catch {
       setInvitationStatus('invalid');
     }
   };
@@ -73,7 +72,7 @@ export default function TeamSetup() {
     try {
       await joinTeamWithInvitation(manualInvitationCode.trim());
       navigate('/players');
-    } catch (error) {
+    } catch {
       // Error will be shown via the error state from useTeam
     }
   };

@@ -67,7 +67,7 @@ export default function PlayerRoster() {
     if (currentTeam && !teamLoading) {
       loadPlayers();
     }
-  }, [currentTeam, teamLoading]);
+  }, [currentTeam, teamLoading, loadPlayers]);
 
   useEffect(() => {
     if (players.length > 0) {
@@ -97,9 +97,9 @@ export default function PlayerRoster() {
       setShowForm(false);
       setEditingPlayer(null);
     }
-  }, [playerId, players, isEditMode]);
+  }, [playerId, players, isEditMode, loadPlayerById]);
 
-  const loadPlayers = async () => {
+  const loadPlayers = useCallback(async () => {
     if (!currentTeam) return;
     
     try {
@@ -120,9 +120,9 @@ export default function PlayerRoster() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentTeam, loadAttendanceStats]);
 
-  const loadPlayerById = async (id) => {
+  const loadPlayerById = useCallback(async (id) => {
     try {
       const playerDoc = await getDoc(doc(db, 'players', id));
       if (playerDoc.exists()) {
@@ -144,7 +144,7 @@ export default function PlayerRoster() {
       console.error('Error loading player:', error);
       navigate('/players');
     }
-  };
+  }, [isEditMode, navigate]);
 
   const handleAddPlayer = () => {
     setEditingPlayer(null);
