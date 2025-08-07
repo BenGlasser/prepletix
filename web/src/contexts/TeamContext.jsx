@@ -127,6 +127,11 @@ export function TeamProvider({ children }) {
   };
 
   const switchTeam = (teamId) => {
+    console.log('🍕 TeamContext.switchTeam called', { 
+      teamId, 
+      currentTeamId: currentTeam?.id,
+      stackTrace: new Error().stack 
+    });
     const team = teams.find(t => t.id === teamId);
     if (team) {
       localStorage.setItem('lastSelectedTeam', teamId);

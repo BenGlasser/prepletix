@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function TeamSetup() {
+  console.log('🍕 TeamSetup rendering - WHY?!', { currentPath: window.location.pathname });
   const { invitationCode } = useParams();
   const navigate = useNavigate();
   const { teams, joinTeamWithInvitation, loading, error, currentTeam } = useTeam();
@@ -29,6 +30,11 @@ export default function TeamSetup() {
   // Redirect to players if user already has teams and no invitation
   useEffect(() => {
     if (!loading && teams.length > 0 && !invitationCode && currentTeam) {
+      console.log('🍕 TeamSetup auto-redirecting to players!', { 
+        currentTeam: currentTeam.id, 
+        redirectTo: `/teams/${currentTeam.id}/players`,
+        stackTrace: new Error().stack 
+      });
       navigate(`/teams/${currentTeam.id}/players`);
     }
   }, [loading, teams, invitationCode, navigate, currentTeam]);

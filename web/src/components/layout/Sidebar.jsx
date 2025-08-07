@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
-import { useTeam } from "../../contexts/TeamContext";
 import { 
   UserGroupIcon, 
   CheckCircleIcon, 
@@ -13,33 +12,33 @@ import {
   UsersIcon
 } from "@heroicons/react/24/outline";
 
-const getNavigationItems = (teamId) => [
+const navigationItems = [
   {
-    path: `/teams/${teamId}/players`,
+    path: "players",
     label: "Players",
     icon: UserGroupIcon,
     description: "Manage team roster"
   },
   {
-    path: `/teams/${teamId}/coaches`,
+    path: "coaches",
     label: "Coaches",
     icon: UsersIcon,
     description: "Manage coaches & chat"
   },
   {
-    path: `/teams/${teamId}/attendance`,
+    path: "attendance",
     label: "Attendance",
     icon: CheckCircleIcon,
     description: "Track player attendance"
   },
   {
-    path: `/teams/${teamId}/practice`,
+    path: "practice",
     label: "Practice Plans",
     icon: ClipboardDocumentListIcon,
     description: "Plan your practices"
   },
   {
-    path: `/teams/${teamId}/drills`,
+    path: "drills",
     label: "Drill Library",
     icon: AcademicCapIcon,
     description: "Browse and manage drills"
@@ -49,20 +48,14 @@ const getNavigationItems = (teamId) => [
 export default function Sidebar({ isOpen, onClose, user, onSignOut }) {
   const navigate = useNavigate();
   const { teamId } = useParams();
-  const { currentTeam } = useTeam();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
   
-  // Use currentTeam.id if available, otherwise fall back to teamId from URL params
-  const activeTeamId = currentTeam?.id || teamId;
-  const navigationItems = activeTeamId ? getNavigationItems(activeTeamId) : [];
-  
-  // Debug user data and team info
-  console.log('User object:', user);
-  console.log('User photoURL:', user?.photoURL);
-  console.log('Current team:', currentTeam);
-  console.log('teamId from params:', teamId);
-  console.log('activeTeamId:', activeTeamId);
+  // Debug to see if teamId is now available
+  console.log('🍕 Sidebar with Outlet pattern:', { 
+    teamId,
+    currentPath: window.location.pathname 
+  });
 
   // Handle clicks outside the user menu
   useEffect(() => {
@@ -191,16 +184,9 @@ export default function Sidebar({ isOpen, onClose, user, onSignOut }) {
                     onClick={() => {
                       setUserMenuOpen(false);
                       onClose(); // Close sidebar on mobile
-                      if (activeTeamId) {
-                        navigate(`/teams/${activeTeamId}/settings`);
-                      }
+                      navigate('settings');
                     }}
-                    disabled={!activeTeamId}
-                    className={`w-full text-left px-3 py-2 text-sm transition-colors duration-200 flex items-center space-x-3 ${
-                      activeTeamId 
-                        ? 'text-gray-700 dark:text-gray-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300' 
-                        : 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                    }`}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/30 dark:hover:text-blue-300 transition-colors duration-200 flex items-center space-x-3"
                   >
                     <Cog6ToothIcon className="w-4 h-4" />
                     <span>Settings</span>

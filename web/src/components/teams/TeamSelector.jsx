@@ -15,11 +15,16 @@ export default function TeamSelector() {
   const [showTeamForm, setShowTeamForm] = useState(false);
 
   const handleTeamSelect = (teamId) => {
+    console.log('🍕 TeamSelector.handleTeamSelect called - this should NOT happen on page load!', { 
+      teamId, 
+      stackTrace: new Error().stack 
+    });
     // Save to localStorage for login redirect
     localStorage.setItem("lastSelectedTeam", teamId);
     switchTeam(teamId);
     setIsOpen(false);
     // Always navigate to the new team's players page when switching teams
+    console.log('🍕 TeamSelector navigating to players:', `/teams/${teamId}/players`);
     navigate(`/teams/${teamId}/players`);
   };
 

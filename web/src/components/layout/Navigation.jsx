@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTeam } from "../../contexts/TeamContext";
 import ThemeDropdown from "../ui/ThemeDropdown";
 import TeamSelector from "../teams/TeamSelector";
@@ -7,14 +7,31 @@ import { Bars3Icon } from "@heroicons/react/24/outline";
 
 export default function Navigation({ onToggleSidebar }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentTeam, loading } = useTeam();
 
   // Use useEffect to navigate to avoid infinite loops
   useEffect(() => {
-    if (!loading && !currentTeam) {
+    const currentPath = location.pathname;
+    const isOnTeamRoute = currentPath.startsWith('/teams/') && !currentPath.startsWith('/teams/setup') && !currentPath.startsWith('/teams/join');
+    
+    if (!loading && !currentTeam && !isOnTeamRoute) {
+      console.log('🍕 Navigation component triggering redirect to /teams/setup!', { 
+        loading, 
+        currentTeam,
+        currentPath,
+        isOnTeamRoute 
+      });
       navigate("/teams/setup");
+    } else if (!loading && !currentTeam && isOnTeamRoute) {
+      console.log('🍕 Navigation: NOT redirecting because user is on team route', {
+        loading,
+        currentTeam,
+        currentPath,
+        isOnTeamRoute
+      });
     }
-  }, [loading, currentTeam, navigate]);
+  }, [loading, currentTeam, navigate, location.pathname]);
 
   // Don't render navigation if no team
   if (!loading && !currentTeam) {

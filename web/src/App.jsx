@@ -5,6 +5,8 @@ import {
   Route,
   Navigate,
   useParams,
+  useNavigate,
+  useLocation,
 } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./firebase";
@@ -12,8 +14,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { TeamProvider } from "./contexts/TeamContext";
 import AuthWrapper from "./components/auth/AuthWrapper";
-import Navigation from "./components/layout/Navigation";
-import Sidebar from "./components/layout/Sidebar";
+import TeamLayout from "./components/layout/TeamLayout";
 
 // Lazy load the main components
 const PlayerRoster = lazy(() => import("./components/players/PlayerRoster"));
@@ -48,11 +49,17 @@ function AuthStateProvider({ children }) {
   return children({ user, loading });
 }
 
-// Component to handle team-level redirects
-function TeamRedirect() {
-  const { teamId } = useParams();
-  return <Navigate to={`/teams/${teamId}/players`} replace />;
+// Debug redirect components
+function TeamsRedirect() {
+  console.log('🍕 Redirect triggered: /teams → /teams/setup');
+  return <Navigate to="/teams/setup" replace />;
 }
+
+function RootRedirect() {
+  console.log('🍕 Redirect triggered: / → /teams/setup');
+  return <Navigate to="/teams/setup" replace />;
+}
+
 
 function App() {
   return (
@@ -105,16 +112,6 @@ function App() {
 }
 
 function AppContent({ user }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const handleToggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  const handleCloseSidebar = () => {
-    setSidebarOpen(false);
-  };
-
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -124,83 +121,44 @@ function AppContent({ user }) {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900 transition-colors duration-200 overflow-hidden">
-      <Navigation onToggleSidebar={handleToggleSidebar} />
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
+          <div className="text-gray-500 dark:text-gray-400">Loading...</div>
+        </div>
+      }
+    >
+      <Routes>
+        {/* Non-team routes */}
+        <Route path="/teams/setup" element={<TeamSetup />} />
+        <Route path="/teams/join/:invitationCode" element={<TeamSetup />} />
+        
+        {/* Team layout with nested routes */}
+        <Route
+          path="/teams/:teamId"
+          element={<TeamLayout user={user} onSignOut={handleSignOut} />}
+        >
+          {/* Nested team routes - these will render inside TeamLayout's <Outlet /> */}
+          <Route path="players" element={<PlayerRoster />} />
+          <Route path="players/:playerId" element={<PlayerRoster />} />
+          <Route path="coaches" element={<Coaches />} />
+          <Route path="attendance" element={<AttendanceTracker />} />
+          <Route path="practice" element={<PracticePlanner />} />
+          <Route path="practice/new" element={<PracticePlanner />} />
+          <Route path="practice/:planId" element={<PracticePlanner />} />
+          <Route path="practice/:planId/edit" element={<PracticePlanner />} />
+          <Route path="drills" element={<DrillLibrary />} />
+          <Route path="drills/:drillId" element={<DrillLibrary />} />
+          <Route path="settings" element={<Settings />} />
+          {/* Default redirect to players for /teams/:teamId */}
+          <Route index element={<Navigate to="players" replace />} />
+        </Route>
 
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={handleCloseSidebar}
-          user={user}
-          onSignOut={handleSignOut}
-        />
-
-        <main className="flex-1 overflow-auto">
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center h-full">
-                <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 dark:border-gray-700/50">
-                  <div className="text-gray-600 dark:text-gray-400 text-center">
-                    Loading...
-                  </div>
-                </div>
-              </div>
-            }
-          >
-            <Routes>
-              <Route path="/teams/setup" element={<TeamSetup />} />
-              <Route
-                path="/teams/join/:invitationCode"
-                element={<TeamSetup />}
-              />
-              {/* Team-specific routes */}
-              <Route path="/teams/:teamId/players" element={<PlayerRoster />} />
-              <Route
-                path="/teams/:teamId/players/:playerId"
-                element={<PlayerRoster />}
-              />
-              <Route path="/teams/:teamId/coaches" element={<Coaches />} />
-              <Route
-                path="/teams/:teamId/attendance"
-                element={<AttendanceTracker />}
-              />
-              <Route
-                path="/teams/:teamId/practice"
-                element={<PracticePlanner />}
-              />
-              <Route
-                path="/teams/:teamId/practice/new"
-                element={<PracticePlanner />}
-              />
-              <Route
-                path="/teams/:teamId/practice/:planId"
-                element={<PracticePlanner />}
-              />
-              <Route
-                path="/teams/:teamId/practice/:planId/edit"
-                element={<PracticePlanner />}
-              />
-              <Route path="/teams/:teamId/drills" element={<DrillLibrary />} />
-              <Route
-                path="/teams/:teamId/drills/:drillId"
-                element={<DrillLibrary />}
-              />
-              <Route path="/teams/:teamId/settings" element={<Settings />} />
-              {/* Default redirects */}
-              {/* <Route path="/teams/:teamId" element={<TeamRedirect />} /> */}
-              <Route
-                path="/teams"
-                element={<Navigate to="/teams/setup" replace />}
-              />
-              <Route
-                path="/"
-                element={<Navigate to="/teams/setup" replace />}
-              />
-            </Routes>
-          </Suspense>
-        </main>
-      </div>
-    </div>
+        {/* Default redirects */}
+        <Route path="/teams" element={<TeamsRedirect />} />
+        <Route path="/" element={<RootRedirect />} />
+      </Routes>
+    </Suspense>
   );
 }
 
