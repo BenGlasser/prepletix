@@ -13,16 +13,6 @@ export default function AttendanceTracker() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadPlayers();
-  }, []);
-
-  useEffect(() => {
-    if (players.length > 0) {
-      loadAttendanceData();
-    }
-  }, [players, selectedDate, loadAttendanceData]);
-
   const loadPlayers = async () => {
     try {
       const playersCollection = collection(db, 'players');
@@ -80,6 +70,16 @@ export default function AttendanceTracker() {
 
     setAttendanceData(attendance);
   }, [players, selectedDate, eventType]);
+
+  useEffect(() => {
+    loadPlayers();
+  }, []);
+
+  useEffect(() => {
+    if (players.length > 0) {
+      loadAttendanceData();
+    }
+  }, [players, selectedDate, loadAttendanceData]);
 
   const updateAttendance = (playerId, field, value) => {
     setAttendanceData(prev => ({
@@ -203,22 +203,22 @@ export default function AttendanceTracker() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-              <div className="bg-green-50 p-3 rounded-lg">
-                <div className="text-lg font-semibold text-green-700">{counts.present}</div>
-                <div className="text-sm text-green-600">Present</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20 p-4 rounded-2xl border border-primary-200/50 dark:border-primary-700/50">
+                <div className="text-2xl font-bold text-primary-700 dark:text-primary-300">{counts.present}</div>
+                <div className="text-sm text-primary-600 dark:text-primary-400 font-medium">Present</div>
               </div>
-              <div className="bg-red-50 p-3 rounded-lg">
-                <div className="text-lg font-semibold text-red-700">{counts.absent}</div>
-                <div className="text-sm text-red-600">Absent</div>
+              <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-2xl border border-red-200/50 dark:border-red-700/50">
+                <div className="text-2xl font-bold text-red-700 dark:text-red-300">{counts.absent}</div>
+                <div className="text-sm text-red-600 dark:text-red-400 font-medium">Absent</div>
               </div>
-              <div className="bg-yellow-50 p-3 rounded-lg">
-                <div className="text-lg font-semibold text-yellow-700">{counts.late}</div>
-                <div className="text-sm text-yellow-600">Late</div>
+              <div className="bg-gradient-to-br from-secondary-50 to-secondary-100 dark:from-secondary-900/20 dark:to-secondary-800/20 p-4 rounded-2xl border border-secondary-200/50 dark:border-secondary-700/50">
+                <div className="text-2xl font-bold text-secondary-700 dark:text-secondary-300">{counts.late}</div>
+                <div className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">Late</div>
               </div>
-              <div className="bg-orange-50 p-3 rounded-lg">
-                <div className="text-lg font-semibold text-orange-700">{counts.left_early}</div>
-                <div className="text-sm text-orange-600">Left Early</div>
+              <div className="bg-gradient-to-br from-accent-50 to-accent-100 dark:from-accent-900/20 dark:to-accent-800/20 p-4 rounded-2xl border border-accent-200/50 dark:border-accent-700/50">
+                <div className="text-2xl font-bold text-accent-600 dark:text-accent-300">{counts.left_early}</div>
+                <div className="text-sm text-accent-600 dark:text-accent-400 font-medium">Left Early</div>
               </div>
             </div>
           </div>

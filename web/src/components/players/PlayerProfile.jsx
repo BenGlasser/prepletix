@@ -8,12 +8,6 @@ export default function PlayerProfile({ player, onClose, onEdit, onDelete }) {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
 
-  useEffect(() => {
-    if (activeTab === 'attendance') {
-      loadAttendanceHistory();
-    }
-  }, [activeTab, player.id, loadAttendanceHistory]);
-
   const loadAttendanceHistory = useCallback(async () => {
     try {
       const attendanceQuery = query(
@@ -29,6 +23,12 @@ export default function PlayerProfile({ player, onClose, onEdit, onDelete }) {
       setLoadingAttendance(false);
     }
   }, [player.id]);
+
+  useEffect(() => {
+    if (activeTab === 'attendance') {
+      loadAttendanceHistory();
+    }
+  }, [activeTab, player.id, loadAttendanceHistory]);
 
   const tabs = [
     { id: 'contact', label: 'Contact Info', icon: '📞' },

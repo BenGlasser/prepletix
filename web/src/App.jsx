@@ -57,6 +57,7 @@ function App() {
             }>
               <Routes>
                 <Route path="/players" element={<PlayerRoster />} />
+                <Route path="/players/:playerId" element={<PlayerRoster />} />
                 <Route path="/attendance" element={<AttendanceTracker />} />
                 <Route path="/practice" element={<PracticePlanner />} />
                 <Route path="/" element={<Navigate to="/players" replace />} />

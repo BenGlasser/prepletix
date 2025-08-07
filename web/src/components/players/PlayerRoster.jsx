@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { useParams, useNavigate } from 'react-router-dom';
+import { collection, getDocs, deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Player } from '../../models/Player';
 import PlayerCard from './PlayerCard';
@@ -9,6 +10,8 @@ import DataSeeder from '../admin/DataSeeder';
 import ColorShowcase from '../admin/ColorShowcase';
 
 export default function PlayerRoster() {
+  const { playerId } = useParams();
+  const navigate = useNavigate();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -18,6 +21,20 @@ export default function PlayerRoster() {
   useEffect(() => {
     loadPlayers();
   }, []);
+
+  useEffect(() => {
+    if (playerId && players.length > 0) {
+      const player = players.find(p => p.id === playerId);
+      if (player) {
+        setSelectedPlayer(player);
+      } else {
+        // If player not found in current list, try loading from Firestore
+        loadPlayerById(playerId);
+      }
+    } else if (!playerId) {
+      setSelectedPlayer(null);
+    }
+  }, [playerId, players]);
 
   const loadPlayers = async () => {
     try {
@@ -29,6 +46,22 @@ export default function PlayerRoster() {
       console.error('Error loading players:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPlayerById = async (id) => {
+    try {
+      const playerDoc = await getDoc(doc(db, 'players', id));
+      if (playerDoc.exists()) {
+        const player = Player.fromFirestore(playerDoc);
+        setSelectedPlayer(player);
+      } else {
+        // Player not found, navigate back to players list
+        navigate('/players');
+      }
+    } catch (error) {
+      console.error('Error loading player:', error);
+      navigate('/players');
     }
   };
 
@@ -60,11 +93,11 @@ export default function PlayerRoster() {
   };
 
   const handlePlayerClick = (player) => {
-    setSelectedPlayer(player);
+    navigate(`/players/${player.id}`);
   };
 
   const handleProfileClose = () => {
-    setSelectedPlayer(null);
+    navigate('/players');
   };
 
   if (selectedPlayer) {
