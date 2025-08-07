@@ -20,6 +20,7 @@ export function TeamProvider({ children }) {
   const [currentTeam, setCurrentTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Helper function to ensure teams are proper Team instances
   const ensureTeamInstance = (team) => {
@@ -66,6 +67,8 @@ export function TeamProvider({ children }) {
         ? teams.find(t => t.id === savedTeamId) || teams[0]
         : teams[0];
       setCurrentTeam(ensureTeamInstance(team));
+      // Mark that initial load is complete after setting team
+      setTimeout(() => setIsInitialLoad(false), 100);
     }
   }, [teams, currentTeam]);
 
@@ -73,6 +76,7 @@ export function TeamProvider({ children }) {
   useEffect(() => {
     if (currentTeam) {
       localStorage.setItem('currentTeamId', currentTeam.id);
+      localStorage.setItem('lastSelectedTeam', currentTeam.id);
     }
   }, [currentTeam]);
 
@@ -125,7 +129,9 @@ export function TeamProvider({ children }) {
   const switchTeam = (teamId) => {
     const team = teams.find(t => t.id === teamId);
     if (team) {
+      localStorage.setItem('lastSelectedTeam', teamId);
       setCurrentTeam(ensureTeamInstance(team));
+      setIsInitialLoad(false); // This is a user action
     }
   };
 
@@ -207,6 +213,7 @@ export function TeamProvider({ children }) {
     currentTeam,
     loading,
     error,
+    isInitialLoad,
     
     // Actions
     createTeam,

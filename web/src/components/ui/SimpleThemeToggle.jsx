@@ -6,7 +6,7 @@ export default function SimpleThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="relative w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center group"
+      className="relative w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700 shadow-sm transition-all duration-200 flex items-center justify-center group"
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       <div className="relative w-5 h-5">

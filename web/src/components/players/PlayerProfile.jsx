@@ -4,9 +4,26 @@ import { db } from '../../firebase';
 import { AttendanceRecord } from '../../models/Attendance';
 import { uploadPlayerPhoto, compressImage, deletePlayerPhoto } from '../../utils/photoUpload';
 import PhotoSelectionModal from '../ui/PhotoSelectionModal';
-import { PhoneIcon, HeartIcon, DocumentTextIcon, CalendarDaysIcon, CameraIcon } from '@heroicons/react/24/outline';
+import Input from '../ui/Input';
+import Textarea from '../ui/Textarea';
+import Select from '../ui/Select';
+import Checkbox from '../ui/Checkbox';
+import { 
+  PhoneIcon, 
+  HeartIcon, 
+  DocumentTextIcon, 
+  CalendarDaysIcon, 
+  CameraIcon, 
+  PencilIcon, 
+  TrashIcon, 
+  ArrowLeftIcon, 
+  UserIcon, 
+  HashtagIcon, 
+  EnvelopeIcon,
+  PlusIcon
+} from '@heroicons/react/24/outline';
 
-export default function PlayerProfile({ player, onClose, onEdit, onDelete }) {
+export default function PlayerProfile({ player, onClose, onDelete }) {
   const [openSections, setOpenSections] = useState(new Set(['contact'])); // Start with contact info open
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
@@ -14,20 +31,199 @@ export default function PlayerProfile({ player, onClose, onEdit, onDelete }) {
   const [newNote, setNewNote] = useState({ category: 'general', content: '' });
   const [playerNotes, setPlayerNotes] = useState(player.notes || []);
   const accordionRefs = useRef({});
-  const [editingFields, setEditingFields] = useState({});
-  const [editValues, setEditValues] = useState({
-    name: player.name,
-    jerseyNumber: player.jerseyNumber,
-    ...player.contacts?.reduce((acc, contact, index) => {
-      acc[`contact_${index}_name`] = contact.name;
-      acc[`contact_${index}_phone`] = contact.phone;
-      acc[`contact_${index}_email`] = contact.email;
-      return acc;
-    }, {})
-  });
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState(player.photoUrl);
+  const [saveTimeout, setSaveTimeout] = useState(null);
+  
+  // Form data state for inline editing
+  const [formData, setFormData] = useState({
+    name: player.name || '',
+    jerseyNumber: player.jerseyNumber || '',
+    photoUrl: player.photoUrl || '',
+    contacts: player.contacts?.length > 0 ? player.contacts : [],
+    medicalInfo: player.medicalInfo || { allergies: [], medications: [], notes: '' },
+    notes: player.notes || []
+  });
+
+  // Auto-save functionality similar to PlayerForm
+  const savePlayerData = useCallback(async (updatedData = formData) => {
+    try {
+      // Helper function to deeply clean undefined values
+      const cleanObject = (obj) => {
+        if (obj === null || obj === undefined) return null;
+        if (Array.isArray(obj)) {
+          return obj
+            .filter(item => item !== undefined && item !== null && item !== '')
+            .map(item => cleanObject(item));
+        }
+        if (typeof obj === 'object' && obj instanceof Date) {
+          return obj;
+        }
+        if (typeof obj === 'object') {
+          const cleaned = {};
+          for (const [key, value] of Object.entries(obj)) {
+            if (value !== undefined) {
+              cleaned[key] = cleanObject(value);
+            }
+          }
+          return cleaned;
+        }
+        return obj;
+      };
+
+      // Create completely sanitized Firestore data object
+      const firestoreData = {
+        teamId: player.teamId,
+        name: updatedData.name || '',
+        jerseyNumber: updatedData.jerseyNumber ? parseInt(updatedData.jerseyNumber) : null,
+        photoUrl: updatedData.photoUrl || '',
+        contacts: (updatedData.contacts || [])
+          .filter(contact => contact && (contact.name || contact.phone || contact.email))
+          .map(contact => ({
+            name: contact.name || '',
+            relationship: contact.relationship || 'parent',
+            phone: contact.phone || '',
+            email: contact.email || '',
+            isPrimary: Boolean(contact.isPrimary)
+          })),
+        medicalInfo: {
+          allergies: (updatedData.medicalInfo?.allergies || [])
+            .filter(item => item && typeof item === 'string' && item.trim() !== ''),
+          medications: (updatedData.medicalInfo?.medications || [])
+            .filter(item => item && typeof item === 'string' && item.trim() !== ''),
+          conditions: [],
+          emergencyContact: null,
+          physicianName: '',
+          physicianPhone: '',
+          insuranceProvider: '',
+          notes: updatedData.medicalInfo?.notes || ''
+        },
+        notes: (updatedData.notes || [])
+          .filter(note => note && note.content)
+          .map(note => ({
+            id: note.id || '',
+            content: note.content || '',
+            category: note.category || 'general',
+            isPrivate: Boolean(note.isPrivate),
+            createdAt: note.createdAt || new Date(),
+            createdBy: note.createdBy || ''
+          })),
+        createdAt: player.createdAt || new Date(),
+        updatedAt: new Date()
+      };
+
+      // Apply deep cleaning to remove any remaining undefined values
+      const cleanFirestoreData = cleanObject(firestoreData);
+
+      // Update existing player
+      await updateDoc(doc(db, 'players', player.id), cleanFirestoreData);
+      
+      // Update local player object for other components
+      Object.assign(player, cleanFirestoreData);
+      
+    } catch (error) {
+      console.error('Error saving player:', error);
+    }
+  }, [player, formData]);
+
+  const debouncedSave = useCallback((updatedData) => {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    const timeout = setTimeout(() => {
+      savePlayerData(updatedData);
+    }, 500); // Save 500ms after user stops typing
+    setSaveTimeout(timeout);
+  }, [saveTimeout, savePlayerData]);
+
+  const handleInputChange = useCallback((field, value) => {
+    const updatedData = { ...formData, [field]: value };
+    setFormData(updatedData);
+    debouncedSave(updatedData);
+  }, [formData, debouncedSave]);
+
+  const handleInputBlur = useCallback(async (field, value) => {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      setSaveTimeout(null);
+    }
+    const updatedData = { ...formData, [field]: value };
+    setFormData(updatedData);
+    await savePlayerData(updatedData);
+  }, [saveTimeout, formData, savePlayerData]);
+
+  const handleContactChange = useCallback((index, field, value) => {
+    const updatedContacts = [...formData.contacts];
+    updatedContacts[index] = { ...updatedContacts[index], [field]: value };
+    
+    // If setting as primary, unset others
+    if (field === 'isPrimary' && value) {
+      updatedContacts.forEach((contact, i) => {
+        if (i !== index) contact.isPrimary = false;
+      });
+    }
+    
+    const updatedData = { ...formData, contacts: updatedContacts };
+    setFormData(updatedData);
+    debouncedSave(updatedData);
+  }, [formData, debouncedSave]);
+
+  const handleMedicalChange = useCallback((field, value) => {
+    const updatedData = {
+      ...formData,
+      medicalInfo: { ...formData.medicalInfo, [field]: value }
+    };
+    setFormData(updatedData);
+    debouncedSave(updatedData);
+  }, [formData, debouncedSave]);
+
+  const handleArrayChange = useCallback((field, index, value) => {
+    const updatedArray = [...(formData.medicalInfo[field] || [])];
+    updatedArray[index] = value;
+    const updatedData = {
+      ...formData,
+      medicalInfo: { ...formData.medicalInfo, [field]: updatedArray }
+    };
+    setFormData(updatedData);
+    debouncedSave(updatedData);
+  }, [formData, debouncedSave]);
+
+  const addArrayItem = useCallback(async (field) => {
+    const updatedArray = [...(formData.medicalInfo[field] || []), ''];
+    const updatedData = {
+      ...formData,
+      medicalInfo: { ...formData.medicalInfo, [field]: updatedArray }
+    };
+    setFormData(updatedData);
+    await savePlayerData(updatedData);
+  }, [formData, savePlayerData]);
+
+  const removeArrayItem = useCallback(async (field, index) => {
+    const updatedArray = (formData.medicalInfo[field] || []).filter((_, i) => i !== index);
+    const updatedData = {
+      ...formData,
+      medicalInfo: { ...formData.medicalInfo, [field]: updatedArray }
+    };
+    setFormData(updatedData);
+    await savePlayerData(updatedData);
+  }, [formData, savePlayerData]);
+
+  const addContact = useCallback(() => {
+    setFormData(prev => ({
+      ...prev,
+      contacts: [...prev.contacts, { name: '', relationship: 'parent', phone: '', email: '', isPrimary: false }]
+    }));
+  }, []);
+
+  const removeContact = useCallback((index) => {
+    if (formData.contacts.length > 1) {
+      const updatedContacts = formData.contacts.filter((_, i) => i !== index);
+      const updatedData = { ...formData, contacts: updatedContacts };
+      setFormData(updatedData);
+      savePlayerData(updatedData);
+    }
+  }, [formData, savePlayerData]);
 
   const loadAttendanceHistory = useCallback(async () => {
     try {
@@ -183,117 +379,6 @@ export default function PlayerProfile({ player, onClose, onEdit, onDelete }) {
     setIsAddingNote(false);
   };
 
-  const handleFieldEdit = (fieldName) => {
-    setEditingFields({ ...editingFields, [fieldName]: true });
-  };
-
-  const handleFieldSave = async (fieldName) => {
-    const newValue = editValues[fieldName];
-    
-    // Handle contact fields
-    if (fieldName.startsWith('contact_')) {
-      const [, contactIndex, contactField] = fieldName.split('_');
-      const index = parseInt(contactIndex);
-      const currentValue = player.contacts?.[index]?.[contactField];
-      
-      if (newValue === currentValue) {
-        setEditingFields({ ...editingFields, [fieldName]: false });
-        return;
-      }
-
-      try {
-        const updatedContacts = [...(player.contacts || [])];
-        if (updatedContacts[index]) {
-          updatedContacts[index][contactField] = newValue;
-          
-          await updateDoc(doc(db, 'players', player.id), {
-            contacts: updatedContacts
-          });
-
-          player.contacts = updatedContacts;
-        }
-        
-        setEditingFields({ ...editingFields, [fieldName]: false });
-      } catch (error) {
-        console.error(`Error saving ${fieldName}:`, error);
-        setEditValues({ ...editValues, [fieldName]: currentValue });
-        if (error.code === 'permission-denied') {
-          alert('Permission denied. You may not have access to edit this player.');
-        } else {
-          alert(`Failed to save contact information. Please try again.`);
-        }
-        // Restore original value on error
-        setEditValues({ ...editValues, [fieldName]: currentValue });
-      }
-      return;
-    }
-
-    // Handle regular fields
-    if (newValue === player[fieldName]) {
-      setEditingFields({ ...editingFields, [fieldName]: false });
-      return;
-    }
-
-    try {
-      await updateDoc(doc(db, 'players', player.id), {
-        [fieldName]: newValue
-      });
-
-      player[fieldName] = newValue;
-      setEditingFields({ ...editingFields, [fieldName]: false });
-    } catch (error) {
-      console.error(`Error saving ${fieldName}:`, error);
-      setEditValues({ ...editValues, [fieldName]: player[fieldName] });
-      if (error.code === 'permission-denied') {
-        alert('Permission denied. You may not have access to edit this player.');
-      } else {
-        alert(`Failed to save ${fieldName}. Please try again.`);
-      }
-    }
-  };
-
-  const handleFieldCancel = (fieldName) => {
-    setEditValues({ ...editValues, [fieldName]: player[fieldName] });
-    setEditingFields({ ...editingFields, [fieldName]: false });
-  };
-
-  const handleFieldKeyDown = (e, fieldName) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleFieldSave(fieldName);
-    } else if (e.key === 'Escape') {
-      handleFieldCancel(fieldName);
-    }
-  };
-
-  const EditableField = ({ fieldName, value, className, type = 'text', placeholder }) => {
-    const isEditing = editingFields[fieldName];
-
-    if (isEditing) {
-      return (
-        <input
-          type={type}
-          value={editValues[fieldName] || ''}
-          onChange={(e) => setEditValues({ ...editValues, [fieldName]: e.target.value })}
-          onBlur={() => handleFieldSave(fieldName)}
-          onKeyDown={(e) => handleFieldKeyDown(e, fieldName)}
-          className={`${className} bg-transparent border-b-2 border-primary-400 focus:border-primary-600 outline-none transition-colors duration-200`}
-          placeholder={placeholder}
-          autoFocus
-        />
-      );
-    }
-
-    return (
-      <span
-        onClick={() => handleFieldEdit(fieldName)}
-        className={`${className} cursor-pointer hover:bg-primary-50 dark:hover:bg-primary-900/20 px-2 py-1 rounded transition-colors duration-200`}
-        title="Click to edit"
-      >
-{value || placeholder}
-      </span>
-    );
-  };
 
   const renderSectionContent = (sectionId) => {
     switch (sectionId) {
@@ -359,37 +444,67 @@ export default function PlayerProfile({ player, onClose, onEdit, onDelete }) {
       case 'contact':
         return (
           <div className="pt-3 space-y-3">
-            {player.contacts?.length > 0 ? (
-              player.contacts.map((contact, index) => (
-                <div key={index} className="border border-gray-200 dark:border-slate-600 rounded-xl p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <EditableField
-                      fieldName={`contact_${index}_name`}
-                      value={editValues[`contact_${index}_name`]}
-                      className="font-medium text-gray-900 dark:text-white"
-                      placeholder="Contact Name"
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={addContact}
+                className="bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1"
+              >
+                <PlusIcon className="w-4 h-4" />
+                <span>Add Contact</span>
+              </button>
+            </div>
+            
+            {formData.contacts?.length > 0 ? (
+              formData.contacts.map((contact, index) => (
+                <div key={index} className="border border-gray-300 dark:border-slate-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-800">
+                  <div className="flex justify-between items-center mb-4">
+                    <Checkbox
+                      label="Primary Contact"
+                      checked={contact.isPrimary}
+                      onChange={(e) => handleContactChange(index, 'isPrimary', e.target.checked)}
                     />
-                    {contact.isPrimary && (
-                      <span className="inline-block px-2 py-1 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 rounded-lg">
-                        Primary
-                      </span>
+                    {formData.contacts.length > 1 && (
+                      <button
+                        onClick={() => removeContact(index)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded"
+                        title="Remove Contact"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 capitalize mb-2">{contact.relationship}</p>
-                  <div className="space-y-1">
-                    <EditableField
-                      fieldName={`contact_${index}_phone`}
-                      value={editValues[`contact_${index}_phone`]}
-                      className="text-sm text-gray-900 dark:text-gray-300 block"
-                      type="tel"
-                      placeholder="Phone number"
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <Input
+                      placeholder="Contact Name"
+                      value={contact.name || ''}
+                      onChange={(e) => handleContactChange(index, 'name', e.target.value)}
+                      onBlur={(e) => handleInputBlur(`contact_${index}_name`, e.target.value)}
+                      icon={UserIcon}
                     />
-                    <EditableField
-                      fieldName={`contact_${index}_email`}
-                      value={editValues[`contact_${index}_email`]}
-                      className="text-sm text-gray-900 dark:text-gray-300 block"
+                    <Select
+                      value={contact.relationship || 'parent'}
+                      onChange={(e) => handleContactChange(index, 'relationship', e.target.value)}
+                    >
+                      <option value="parent">Parent</option>
+                      <option value="guardian">Guardian</option>
+                      <option value="emergency">Emergency Contact</option>
+                    </Select>
+                    <Input
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={contact.phone || ''}
+                      onChange={(e) => handleContactChange(index, 'phone', e.target.value)}
+                      onBlur={(e) => handleInputBlur(`contact_${index}_phone`, e.target.value)}
+                      icon={PhoneIcon}
+                    />
+                    <Input
                       type="email"
-                      placeholder="Email address"
+                      placeholder="Email Address"
+                      value={contact.email || ''}
+                      onChange={(e) => handleContactChange(index, 'email', e.target.value)}
+                      onBlur={(e) => handleInputBlur(`contact_${index}_email`, e.target.value)}
+                      icon={EnvelopeIcon}
                     />
                   </div>
                 </div>
@@ -402,45 +517,91 @@ export default function PlayerProfile({ player, onClose, onEdit, onDelete }) {
 
       case 'medical':
         return (
-          <div className="pt-3 space-y-4">
+          <div className="pt-3 space-y-6">
             {/* Allergies */}
             <div>
-              <h4 className="font-medium text-gray-900 dark:text-white mb-3">Allergies</h4>
-              {player.medicalInfo?.allergies?.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {player.medicalInfo.allergies.map((allergy, index) => (
-                    <span key={index} className="inline-block px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full text-sm">
-                      {allergy}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">No known allergies</p>
-              )}
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-medium text-gray-900 dark:text-white">Allergies</h4>
+                <button
+                  onClick={() => addArrayItem('allergies')}
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  <span>Add Allergy</span>
+                </button>
+              </div>
+              <div className="space-y-3">
+                {(formData.medicalInfo?.allergies || []).map((allergy, index) => (
+                  <div key={index} className="flex space-x-3">
+                    <Input
+                      value={allergy}
+                      onChange={(e) => handleArrayChange('allergies', index, e.target.value)}
+                      onBlur={(e) => handleInputBlur(`allergy_${index}`, e.target.value)}
+                      placeholder="Enter allergy"
+                      className="flex-1"
+                    />
+                    <button
+                      onClick={() => removeArrayItem('allergies', index)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded"
+                      title="Remove Allergy"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {(!formData.medicalInfo?.allergies || formData.medicalInfo.allergies.length === 0) && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No allergies listed</p>
+                )}
+              </div>
             </div>
 
             {/* Medications */}
             <div>
-              <h4 className="font-medium text-gray-900 dark:text-white mb-3">Medications</h4>
-              {player.medicalInfo?.medications?.length > 0 ? (
-                <ul className="list-disc list-inside space-y-1">
-                  {player.medicalInfo.medications.map((medication, index) => (
-                    <li key={index} className="text-gray-700 dark:text-gray-300">{medication}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">No medications</p>
-              )}
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-medium text-gray-900 dark:text-white">Medications</h4>
+                <button
+                  onClick={() => addArrayItem('medications')}
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center space-x-1"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  <span>Add Medication</span>
+                </button>
+              </div>
+              <div className="space-y-3">
+                {(formData.medicalInfo?.medications || []).map((medication, index) => (
+                  <div key={index} className="flex space-x-3">
+                    <Input
+                      value={medication}
+                      onChange={(e) => handleArrayChange('medications', index, e.target.value)}
+                      onBlur={(e) => handleInputBlur(`medication_${index}`, e.target.value)}
+                      placeholder="Enter medication"
+                      className="flex-1"
+                    />
+                    <button
+                      onClick={() => removeArrayItem('medications', index)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded"
+                      title="Remove Medication"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {(!formData.medicalInfo?.medications || formData.medicalInfo.medications.length === 0) && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No medications listed</p>
+                )}
+              </div>
             </div>
 
             {/* Medical Notes */}
             <div>
               <h4 className="font-medium text-gray-900 dark:text-white mb-3">Medical Notes</h4>
-              {player.medicalInfo?.notes ? (
-                <p className="text-gray-700 dark:text-gray-300">{player.medicalInfo.notes}</p>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">No medical notes</p>
-              )}
+              <Textarea
+                value={formData.medicalInfo?.notes || ''}
+                onChange={(e) => handleMedicalChange('notes', e.target.value)}
+                onBlur={(e) => handleInputBlur('medical_notes', e.target.value)}
+                rows={4}
+                placeholder="Any additional medical information, conditions, or special instructions..."
+              />
             </div>
           </div>
         );
@@ -516,7 +677,7 @@ Save Note
             {playerNotes?.length > 0 ? (
               <div className="space-y-3">
                 {playerNotes.map((note, index) => (
-                  <div key={index} className="border border-gray-200 dark:border-slate-600 rounded-xl p-4">
+                  <div key={index} className="border border-gray-300 dark:border-slate-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-800">
                     <div className="flex justify-between items-start mb-3">
                       <span className={`inline-block px-3 py-1 text-xs rounded-lg capitalize font-medium ${
                         note.category === 'medical' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' :
@@ -555,10 +716,10 @@ Save Note
   };
 
   return (
-    <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
+    <div className="h-full bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
       <div className="max-w-4xl mx-auto min-h-full">
         {/* Header */}
-        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700/50 p-6 mb-6">
           <div className="flex justify-between items-start">
             <div className="flex items-center space-x-6">
               <div 
@@ -587,33 +748,39 @@ Save Note
                   )}
                 </div>
               </div>
-              <div>
-                <EditableField
-                  fieldName="name"
-                  value={editValues.name}
-                  className="text-3xl font-bold text-gray-900 dark:text-white mb-2 block"
-                  placeholder="Player Name"
-                />
-                <div className="flex items-center space-x-1">
+              <div className="flex-1">
+                <div className="mb-4">
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    onBlur={(e) => handleInputBlur('name', e.target.value)}
+                    placeholder="Player Name"
+                    className="text-3xl font-bold bg-transparent border-0 border-b-2 border-transparent hover:border-gray-300 focus:border-primary-500 rounded-none px-0 py-1"
+                    icon={UserIcon}
+                  />
+                </div>
+                <div className="flex items-center space-x-2 mb-4">
                   <span className="text-xl text-primary-600 dark:text-primary-400 font-semibold">#</span>
-                  <EditableField
-                    fieldName="jerseyNumber"
-                    value={editValues.jerseyNumber}
-                    className="text-xl text-primary-600 dark:text-primary-400 font-semibold"
+                  <Input
                     type="number"
+                    value={formData.jerseyNumber}
+                    onChange={(e) => handleInputChange('jerseyNumber', e.target.value)}
+                    onBlur={(e) => handleInputBlur('jerseyNumber', e.target.value)}
                     placeholder="Jersey #"
+                    className="text-xl text-primary-600 dark:text-primary-400 font-semibold bg-transparent border-0 border-b-2 border-transparent hover:border-gray-300 focus:border-primary-500 rounded-none px-0 py-1 w-24"
+                    icon={HashtagIcon}
                   />
                 </div>
                 {/* Alert badges */}
-                <div className="flex space-x-2 mt-3">
-                  {player.medicalInfo?.allergies?.length > 0 && (
+                <div className="flex space-x-2">
+                  {formData.medicalInfo?.allergies?.length > 0 && (
                     <span className="inline-block px-3 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full font-medium">
-                      Has Allergies
+                      Has Allergies ({formData.medicalInfo.allergies.length})
                     </span>
                   )}
-                  {player.medicalInfo?.conditions?.length > 0 && (
-                    <span className="inline-block px-3 py-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full font-medium">
-                      Medical Conditions
+                  {formData.medicalInfo?.medications?.length > 0 && (
+                    <span className="inline-block px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full font-medium">
+                      Medications ({formData.medicalInfo.medications.length})
                     </span>
                   )}
                 </div>
@@ -622,22 +789,18 @@ Save Note
             
             <div className="flex space-x-3">
               <button
-                onClick={onEdit}
-                className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-3 rounded-xl hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-600/25 font-medium"
-              >
-                Edit
-              </button>
-              <button
                 onClick={onDelete}
-                className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg shadow-red-600/25 font-medium"
+                className="bg-gradient-to-r from-red-600 to-red-700 text-white p-3 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg shadow-red-600/25"
+                title="Delete Player"
               >
-                Delete
+                <TrashIcon className="w-5 h-5" />
               </button>
               <button
                 onClick={onClose}
-                className="bg-gray-500 text-white px-6 py-3 rounded-xl hover:bg-gray-600 transition-all duration-200 shadow-lg font-medium"
+                className="bg-gray-500 text-white p-3 rounded-xl hover:bg-gray-600 transition-all duration-200 shadow-lg"
+                title="Go Back"
               >
-                Back
+                <ArrowLeftIcon className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -649,11 +812,11 @@ Save Note
             <div 
               key={section.id} 
               ref={el => accordionRefs.current[section.id] = el}
-              className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 overflow-hidden"
+              className="bg-white dark:bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-300 dark:border-gray-700/50 overflow-hidden"
             >
               <button
                 onClick={() => toggleSection(section.id)}
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200"
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
               >
                 <div className="flex items-center space-x-3">
                   <section.icon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
@@ -676,7 +839,7 @@ Save Note
                   ? 'max-h-[2000px] opacity-100' 
                   : 'max-h-0 opacity-0'
               } overflow-hidden`}>
-                <div className="px-4 pb-4 border-t border-gray-100/50 dark:border-gray-700/50">
+                <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700/50">
                   {renderSectionContent(section.id)}
                 </div>
               </div>

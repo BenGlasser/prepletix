@@ -35,8 +35,33 @@ export default function DrillLibrary() {
   const [editValues, setEditValues] = useState({});
   const [equipmentInput, setEquipmentInput] = useState('');
 
-  const { drillId } = useParams();
+  const { drillId, teamId } = useParams();
   const navigate = useNavigate();
+
+  const loadDrills = useCallback(async () => {
+    if (!currentTeam) return;
+    
+    try {
+      // Load both team-specific drills and global drills
+      // Note: Firestore 'or' queries can be complex, so we'll use a simpler approach
+      const drillsCollection = collection(db, 'drills');
+      const snapshot = await getDocs(drillsCollection);
+      const allDrills = snapshot.docs.map(doc => Drill.fromFirestore(doc));
+      
+      // Filter to show only team drills and global drills
+      const drillList = allDrills.filter(drill => 
+        drill.isGlobal || drill.teamId === currentTeam.id
+      );
+      
+      // Sort by name
+      drillList.sort((a, b) => a.name.localeCompare(b.name));
+      setDrills(drillList);
+    } catch (error) {
+      console.error('Error loading drills:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentTeam]);
 
   useEffect(() => {
     if (currentTeam && !teamLoading) {
@@ -67,31 +92,6 @@ export default function DrillLibrary() {
       setSelectedDrill(null);
     }
   }, [drillId, drills]);
-
-  const loadDrills = useCallback(async () => {
-    if (!currentTeam) return;
-    
-    try {
-      // Load both team-specific drills and global drills
-      // Note: Firestore 'or' queries can be complex, so we'll use a simpler approach
-      const drillsCollection = collection(db, 'drills');
-      const snapshot = await getDocs(drillsCollection);
-      const allDrills = snapshot.docs.map(doc => Drill.fromFirestore(doc));
-      
-      // Filter to show only team drills and global drills
-      const drillList = allDrills.filter(drill => 
-        drill.isGlobal || drill.teamId === currentTeam.id
-      );
-      
-      // Sort by name
-      drillList.sort((a, b) => a.name.localeCompare(b.name));
-      setDrills(drillList);
-    } catch (error) {
-      console.error('Error loading drills:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentTeam]);
 
   // Filter functions
   const getUniqueCategories = () => {
@@ -175,7 +175,7 @@ export default function DrillLibrary() {
       
       // Select the new drill and navigate to it
       setSelectedDrill(newDrill);
-      navigate(`/drills/${docRef.id}`);
+      navigate(`/teams/${teamId}/drills/${docRef.id}`);
       
       // Initialize edit values
       setEditValues({
@@ -295,7 +295,7 @@ export default function DrillLibrary() {
 
   const handleViewDrill = (drill) => {
     setSelectedDrill(drill);
-    navigate(`/drills/${drill.id}`);
+    navigate(`/teams/${teamId}/drills/${drill.id}`);
   };
 
   const handleDeleteDrill = async (drillId) => {
@@ -305,7 +305,7 @@ export default function DrillLibrary() {
         await loadDrills();
         if (selectedDrill && selectedDrill.id === drillId) {
           setSelectedDrill(null);
-          navigate('/drills');
+          navigate(`/teams/${teamId}/drills`);
         }
       } catch (error) {
         console.error('Error deleting drill:', error);
@@ -351,8 +351,8 @@ export default function DrillLibrary() {
   }
 
   return (
-    <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
-      <div className="max-w-7xl mx-auto min-h-full">
+    <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="p-6 min-h-full">
         {/* Header */}
         <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
           <div className="flex justify-between items-center">

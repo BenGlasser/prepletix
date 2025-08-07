@@ -21,45 +21,8 @@ export default function PracticePlanner() {
   const [editingPlan, setEditingPlan] = useState(null);
   const [view, setView] = useState('list'); // 'list' or 'calendar'
   
-  const { planId } = useParams();
+  const { planId, teamId } = useParams();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (currentTeam && !teamLoading) {
-      loadPracticePlans();
-    }
-  }, [currentTeam, teamLoading, loadPracticePlans]);
-
-  useEffect(() => {
-    // Handle URL parameters for editing specific plans
-    if (planId === 'new') {
-      setEditingPlan(null);
-      setShowForm(true);
-    } else if (planId) {
-      loadSpecificPlan(planId);
-    } else {
-      // If no planId, make sure form is closed
-      setShowForm(false);
-      setEditingPlan(null);
-    }
-  }, [planId, loadSpecificPlan]);
-
-  const loadSpecificPlan = useCallback(async (id) => {
-    try {
-      const planDoc = await getDoc(doc(db, 'practicePlans', id));
-      if (planDoc.exists()) {
-        const plan = PracticePlan.fromFirestore(planDoc);
-        setEditingPlan(plan);
-        setShowForm(true);
-      } else {
-        console.error('Practice plan not found');
-        navigate('/practice'); // Redirect if plan doesn't exist
-      }
-    } catch (error) {
-      console.error('Error loading practice plan:', error);
-      navigate('/practice'); // Redirect on error
-    }
-  }, [navigate]);
 
   const loadPracticePlans = useCallback(async () => {
     if (!currentTeam) return;
@@ -82,16 +45,53 @@ export default function PracticePlanner() {
     }
   }, [currentTeam]);
 
+  const loadSpecificPlan = useCallback(async (id) => {
+    try {
+      const planDoc = await getDoc(doc(db, 'practicePlans', id));
+      if (planDoc.exists()) {
+        const plan = PracticePlan.fromFirestore(planDoc);
+        setEditingPlan(plan);
+        setShowForm(true);
+      } else {
+        console.error('Practice plan not found');
+        navigate(`/teams/${teamId}/practice`); // Redirect if plan doesn't exist
+      }
+    } catch (error) {
+      console.error('Error loading practice plan:', error);
+      navigate(`/teams/${teamId}/practice`); // Redirect on error
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    if (currentTeam && !teamLoading) {
+      loadPracticePlans();
+    }
+  }, [currentTeam, teamLoading, loadPracticePlans]);
+
+  useEffect(() => {
+    // Handle URL parameters for editing specific plans
+    if (planId === 'new') {
+      setEditingPlan(null);
+      setShowForm(true);
+    } else if (planId) {
+      loadSpecificPlan(planId);
+    } else {
+      // If no planId, make sure form is closed
+      setShowForm(false);
+      setEditingPlan(null);
+    }
+  }, [planId, loadSpecificPlan]);
+
   const handleAddPlan = () => {
     setEditingPlan(null);
     setShowForm(true);
-    navigate('/practice/new');
+    navigate(`/teams/${teamId}/practice/new`);
   };
 
   const handleEditPlan = (plan) => {
     setEditingPlan(plan);
     setShowForm(true);
-    navigate(`/practice/${plan.id}/edit`);
+    navigate(`/teams/${teamId}/practice/${plan.id}/edit`);
   };
 
   const handleDuplicatePlan = async (plan) => {
@@ -112,7 +112,7 @@ export default function PracticePlanner() {
       
       setEditingPlan(savedDuplicate);
       setShowForm(true);
-      navigate(`/practice/${docRef.id}/edit`);
+      navigate(`/teams/${teamId}/practice/${docRef.id}/edit`);
     } catch (error) {
       console.error('Error duplicating practice plan:', error);
     }
@@ -132,7 +132,7 @@ export default function PracticePlanner() {
   const handleFormClose = () => {
     setShowForm(false);
     setEditingPlan(null);
-    navigate('/practice');
+    navigate(`/teams/${teamId}/practice`);
     loadPracticePlans();
   };
 
@@ -184,8 +184,8 @@ export default function PracticePlanner() {
   }
 
   return (
-    <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
-      <div className="max-w-6xl mx-auto min-h-full">
+    <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="p-6 min-h-full">
         {/* Header */}
         <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
           <div className="flex justify-between items-center">

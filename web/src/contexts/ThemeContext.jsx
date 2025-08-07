@@ -82,10 +82,16 @@ export const ThemeProvider = ({ children }) => {
     setTheme(newTheme);
   };
 
+  const toggleTheme = () => {
+    const newTheme = isDark ? 'light' : 'dark';
+    setThemeMode(newTheme);
+  };
+
   const value = {
     theme,
     isDark,
-    setTheme: setThemeMode
+    setTheme: setThemeMode,
+    toggleTheme
   };
 
   return (

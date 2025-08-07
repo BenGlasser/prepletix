@@ -13,7 +13,7 @@ import {
 export default function TeamSetup() {
   const { invitationCode } = useParams();
   const navigate = useNavigate();
-  const { teams, joinTeamWithInvitation, loading, error } = useTeam();
+  const { teams, joinTeamWithInvitation, loading, error, currentTeam } = useTeam();
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [invitationStatus, setInvitationStatus] = useState('checking'); // checking, valid, invalid, used
   const [manualInvitationCode, setManualInvitationCode] = useState('');
@@ -28,10 +28,10 @@ export default function TeamSetup() {
 
   // Redirect to players if user already has teams and no invitation
   useEffect(() => {
-    if (!loading && teams.length > 0 && !invitationCode) {
-      navigate('/players');
+    if (!loading && teams.length > 0 && !invitationCode && currentTeam) {
+      navigate(`/teams/${currentTeam.id}/players`);
     }
-  }, [loading, teams, invitationCode, navigate]);
+  }, [loading, teams, invitationCode, navigate, currentTeam]);
 
   const checkInvitation = async () => {
     try {
@@ -47,10 +47,10 @@ export default function TeamSetup() {
 
   const handleJoinTeam = async () => {
     try {
-      await joinTeamWithInvitation(invitationCode);
+      const team = await joinTeamWithInvitation(invitationCode);
       setInvitationStatus('used');
       setTimeout(() => {
-        navigate('/players');
+        navigate(`/teams/${team.id}/players`);
       }, 2000);
     } catch {
       setInvitationStatus('invalid');
@@ -61,17 +61,17 @@ export default function TeamSetup() {
     setShowTeamForm(true);
   };
 
-  const handleTeamCreated = () => {
+  const handleTeamCreated = (team) => {
     setShowTeamForm(false);
-    navigate('/players');
+    navigate(`/teams/${team.id}/players`);
   };
 
   const handleManualInvitationSubmit = async () => {
     if (!manualInvitationCode.trim()) return;
     
     try {
-      await joinTeamWithInvitation(manualInvitationCode.trim());
-      navigate('/players');
+      const team = await joinTeamWithInvitation(manualInvitationCode.trim());
+      navigate(`/teams/${team.id}/players`);
     } catch {
       // Error will be shown via the error state from useTeam
     }

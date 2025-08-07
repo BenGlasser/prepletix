@@ -1,20 +1,23 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTeam } from '../../contexts/TeamContext';
 import { ChevronDownIcon, PlusIcon, CheckIcon } from '@heroicons/react/24/outline';
 import TeamForm from './TeamForm';
 
 export default function TeamSelector() {
   const navigate = useNavigate();
-  const { teams, currentTeam, switchTeam } = useTeam();
+  const { teamId: currentTeamId } = useParams();
+  const { teams, currentTeam, switchTeam, isInitialLoad } = useTeam();
   const [isOpen, setIsOpen] = useState(false);
   const [showTeamForm, setShowTeamForm] = useState(false);
 
   const handleTeamSelect = (teamId) => {
+    // Save to localStorage for login redirect
+    localStorage.setItem('lastSelectedTeam', teamId);
     switchTeam(teamId);
     setIsOpen(false);
-    // Navigate to team roster when a team is selected
-    navigate('/players');
+    // Always navigate to the new team's players page when switching teams
+    navigate(`/teams/${teamId}/players`);
   };
 
   const handleCreateTeam = () => {
@@ -45,18 +48,18 @@ export default function TeamSelector() {
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center space-x-3 px-3 py-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 rounded-lg hover:bg-gray-50/95 dark:hover:bg-gray-700/95 transition-all duration-200 min-w-[200px]"
+          className="flex items-center space-x-3 px-3 py-2 bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-300 dark:border-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/95 transition-all duration-200 min-w-[200px] shadow-sm"
         >
           <div className="flex-1 text-left">
             <div className="text-sm font-medium text-gray-900 dark:text-white">
               {currentTeam?.name || 'Select Team'}
+              {currentTeam && (
+                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 font-normal">
+                  {currentTeam.getSeasonDisplay ? currentTeam.getSeasonDisplay() : 
+                   `${currentTeam.season?.period || 'Unknown'} ${currentTeam.season?.year || 'Unknown'}`}
+                </span>
+              )}
             </div>
-            {currentTeam && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                {currentTeam.getSeasonDisplay ? currentTeam.getSeasonDisplay() : 
-                 `${currentTeam.season?.period || 'Unknown'} ${currentTeam.season?.year || 'Unknown'}`}
-              </div>
-            )}
           </div>
           <ChevronDownIcon 
             className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
@@ -71,12 +74,12 @@ export default function TeamSelector() {
             ? 'opacity-100 scale-y-100 scale-x-100 translate-y-0'
             : 'opacity-0 scale-y-0 scale-x-100 -translate-y-2 pointer-events-none'
         }`}>
-          <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-xl py-2 max-h-60 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-300 dark:border-gray-700/50 rounded-xl shadow-xl py-2 max-h-60 overflow-y-auto">
             {teams.map((team) => (
               <button
                 key={team.id}
                 onClick={() => handleTeamSelect(team.id)}
-                className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200"
+                className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
               >
                 <div>
                   <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -93,11 +96,11 @@ export default function TeamSelector() {
               </button>
             ))}
             
-            <hr className="my-2 border-gray-200/50 dark:border-gray-700/50" />
+            <hr className="my-2 border-gray-300 dark:border-gray-700/50" />
             
             <button
               onClick={handleCreateTeam}
-              className="w-full flex items-center space-x-3 px-4 py-2.5 text-left hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-all duration-200 text-primary-600 dark:text-primary-400"
+              className="w-full flex items-center space-x-3 px-4 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200 text-primary-600 dark:text-primary-400"
             >
               <PlusIcon className="w-4 h-4" />
               <span className="text-sm font-medium">Create New Team</span>

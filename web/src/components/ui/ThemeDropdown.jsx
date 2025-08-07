@@ -63,7 +63,7 @@ export default function ThemeDropdown() {
       {/* Dropdown Trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 border border-gray-200/50 dark:border-gray-700/50"
+        className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition-all duration-200 border border-gray-300 dark:border-gray-700/50 shadow-sm"
         title={`Current theme: ${currentTheme.label}`}
       >
         <div className="text-gray-600 dark:text-gray-400">
@@ -86,7 +86,7 @@ export default function ThemeDropdown() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm z-50">
+        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-300 dark:border-gray-700/50 backdrop-blur-sm z-50">
           <div className="p-2">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-2 uppercase tracking-wide">
               Theme Preference
@@ -98,7 +98,7 @@ export default function ThemeDropdown() {
                 className={`w-full flex items-center space-x-3 px-3 py-3 rounded-xl text-left transition-all duration-200 ${
                   theme === themeOption.id
                     ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 border border-transparent hover:border-gray-300'
                 }`}
               >
                 <div className={`${

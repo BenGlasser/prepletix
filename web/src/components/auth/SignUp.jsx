@@ -49,7 +49,7 @@ export default function SignUp({ onToggleMode }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="absolute top-4 right-4">
         <SimpleThemeToggle />
       </div>
@@ -145,7 +145,7 @@ export default function SignUp({ onToggleMode }) {
               <div className="w-full border-t border-gray-300" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 dark:bg-slate-900 text-gray-500 dark:text-gray-400">
+              <span className="px-2 bg-gray-100 dark:bg-slate-900 text-gray-500 dark:text-gray-400">
                 Or continue with
               </span>
             </div>

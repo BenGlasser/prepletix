@@ -5,14 +5,9 @@ import { uploadPlayerPhoto, compressImage, deletePlayerPhoto } from '../../utils
 import PhotoSelectionModal from '../ui/PhotoSelectionModal';
 import { CameraIcon } from '@heroicons/react/24/outline';
 
-export default function PlayerCard({ player, onClick, onEdit, onDelete, attendanceStats, onPhotoUpdate }) {
+export default function PlayerCard({ player, onClick, onDelete, attendanceStats, onPhotoUpdate }) {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-
-  const handleEdit = (e) => {
-    e.stopPropagation();
-    onEdit();
-  };
 
   const handleDelete = (e) => {
     e.stopPropagation();
@@ -72,7 +67,7 @@ export default function PlayerCard({ player, onClick, onEdit, onDelete, attendan
 
   return (
     <div 
-      className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-6 hover:shadow-xl hover:shadow-primary-600/10 transition-all duration-300 cursor-pointer hover:scale-[1.02] group flex flex-col h-full min-h-[280px]"
+      className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-300 dark:border-gray-700/50 shadow-sm p-6 hover:shadow-xl hover:shadow-primary-600/10 hover:border-primary-300 transition-all duration-300 cursor-pointer hover:scale-[1.02] group flex flex-col h-full min-h-[280px]"
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-4">
@@ -124,17 +119,8 @@ export default function PlayerCard({ player, onClick, onEdit, onDelete, attendan
         
         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            onClick={handleEdit}
-            className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700/50 hover:bg-primary-100 dark:hover:bg-primary-900/30 flex items-center justify-center transition-colors"
-            title="Edit player"
-          >
-            <svg className="w-4 h-4 text-gray-600 dark:text-gray-400 hover:text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
-          <button
             onClick={handleDelete}
-            className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700/50 hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-xl bg-gray-200 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 hover:bg-red-100 hover:border-red-300 dark:hover:bg-red-900/30 flex items-center justify-center transition-all"
             title="Delete player"
           >
             <svg className="w-4 h-4 text-gray-600 dark:text-gray-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -10,10 +10,9 @@ import PlayerForm from './PlayerForm';
 import PlayerProfile from './PlayerProfile';
 
 export default function PlayerRoster() {
-  const { playerId } = useParams();
+  const { playerId, teamId } = useParams();
   const navigate = useNavigate();
   const { currentTeam, loading: teamLoading } = useTeam();
-  const isEditMode = window.location.pathname.endsWith('/edit');
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -87,28 +86,35 @@ export default function PlayerRoster() {
   }, [currentTeam, loadAttendanceStats]);
 
   const loadPlayerById = useCallback(async (id) => {
+    if (!currentTeam) {
+      // Wait for team to be loaded
+      return;
+    }
+    
     try {
       const playerDoc = await getDoc(doc(db, 'players', id));
       if (playerDoc.exists()) {
         const player = Player.fromFirestore(playerDoc);
-        if (isEditMode) {
-          setEditingPlayer(player);
-          setShowForm(true);
-          setSelectedPlayer(null);
-        } else {
-          setSelectedPlayer(player);
-          setShowForm(false);
-          setEditingPlayer(null);
+        
+        // Check if player belongs to current team
+        if (player.teamId !== currentTeam.id) {
+          console.warn('Player does not belong to current team');
+          navigate(`/teams/${teamId}/players`);
+          return;
         }
+        
+        setSelectedPlayer(player);
+        setShowForm(false);
+        setEditingPlayer(null);
       } else {
         // Player not found, navigate back to players list
-        navigate('/players');
+        navigate(`/teams/${teamId}/players`);
       }
     } catch (error) {
       console.error('Error loading player:', error);
-      navigate('/players');
+      navigate(`/teams/${teamId}/players`);
     }
-  }, [isEditMode, navigate]);
+  }, [currentTeam, navigate]);
 
   useEffect(() => {
     if (currentTeam && !teamLoading) {
@@ -123,28 +129,29 @@ export default function PlayerRoster() {
   }, [players, loadAttendanceStats]);
 
   useEffect(() => {
-    if (playerId && players.length > 0) {
-      const player = players.find(p => p.id === playerId);
-      if (player) {
-        if (isEditMode) {
-          setEditingPlayer(player);
-          setShowForm(true);
-          setSelectedPlayer(null);
-        } else {
+    if (playerId) {
+      if (players.length > 0) {
+        // Players are loaded, look for the specific player
+        const player = players.find(p => p.id === playerId);
+        if (player) {
           setSelectedPlayer(player);
           setShowForm(false);
           setEditingPlayer(null);
+        } else {
+          // Player not found in current list, try loading from Firestore
+          loadPlayerById(playerId);
         }
-      } else {
-        // If player not found in current list, try loading from Firestore
+      } else if (!loading) {
+        // Players are not loaded yet but loading is complete, try direct load
         loadPlayerById(playerId);
       }
+      // If still loading players, wait for them to load
     } else if (!playerId) {
       setSelectedPlayer(null);
       setShowForm(false);
       setEditingPlayer(null);
     }
-  }, [playerId, players, isEditMode, loadPlayerById]);
+  }, [playerId, players, loading, currentTeam, loadPlayerById]);
 
   const handleAddPlayer = () => {
     setEditingPlayer(null);
@@ -152,14 +159,8 @@ export default function PlayerRoster() {
   };
 
   const handleEditPlayer = (player) => {
-    if (playerId) {
-      // If we're viewing a player profile, navigate to edit URL
-      navigate(`/players/${player.id}/edit`);
-    } else {
-      // If we're on the roster page, show form directly
-      setEditingPlayer(player);
-      setShowForm(true);
-    }
+    // Navigate directly to the player profile page (which now has inline editing)
+    navigate(`/teams/${teamId}/players/${player.id}`);
   };
 
   const handleDeletePlayer = async (playerId) => {
@@ -177,19 +178,14 @@ export default function PlayerRoster() {
     setShowForm(false);
     setEditingPlayer(null);
     loadPlayers();
-    
-    // If we're in edit mode, navigate back to the player profile
-    if (isEditMode && playerId) {
-      navigate(`/players/${playerId}`);
-    }
   };
 
   const handlePlayerClick = (player) => {
-    navigate(`/players/${player.id}`);
+    navigate(`/teams/${teamId}/players/${player.id}`);
   };
 
   const handleProfileClose = () => {
-    navigate('/players');
+    navigate(`/teams/${teamId}/players`);
   };
 
   const handlePhotoUpdate = (playerId, photoUrl) => {
@@ -223,7 +219,6 @@ export default function PlayerRoster() {
       <PlayerProfile 
         player={selectedPlayer} 
         onClose={handleProfileClose}
-        onEdit={() => handleEditPlayer(selectedPlayer)}
         onDelete={() => handleDeletePlayer(selectedPlayer.id)}
       />
     );
@@ -249,8 +244,8 @@ export default function PlayerRoster() {
   }
 
   return (
-    <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-7xl mx-auto px-6 py-8 min-h-full">
+    <div className="h-full bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="px-6 py-8 min-h-full">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Team Roster</h2>
@@ -293,7 +288,6 @@ export default function PlayerRoster() {
                 key={player.id}
                 player={player}
                 onClick={() => handlePlayerClick(player)}
-                onEdit={() => handleEditPlayer(player)}
                 onDelete={() => handleDeletePlayer(player.id)}
                 attendanceStats={attendanceStats[player.id]}
                 onPhotoUpdate={handlePhotoUpdate}

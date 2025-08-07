@@ -182,7 +182,7 @@ export default function AttendanceTracker() {
 
   return (
     <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="max-w-7xl mx-auto px-6 py-8 min-h-full">
+      <div className="px-6 py-8 min-h-full">
         <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50">
           {/* Header */}
           <div className="p-8 border-b border-gray-200/50 dark:border-gray-700/50">

@@ -32,15 +32,17 @@ export default function TeamForm({ team, onClose }) {
     try {
       setError('');
       
+      let resultTeam;
       if (team && team.id) {
         // Update existing team
         await updateTeam(team.id, formData);
+        resultTeam = team;
       } else {
         // Create new team
-        await createTeam(formData);
+        resultTeam = await createTeam(formData);
       }
       
-      onClose();
+      onClose(resultTeam);
     } catch (error) {
       setError(error.message || 'Failed to save team');
     }
