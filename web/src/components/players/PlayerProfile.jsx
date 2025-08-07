@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { AttendanceRecord } from '../../models/Attendance';
 
@@ -12,9 +12,9 @@ export default function PlayerProfile({ player, onClose, onEdit, onDelete }) {
     if (activeTab === 'attendance') {
       loadAttendanceHistory();
     }
-  }, [activeTab, player.id]);
+  }, [activeTab, player.id, loadAttendanceHistory]);
 
-  const loadAttendanceHistory = async () => {
+  const loadAttendanceHistory = useCallback(async () => {
     try {
       const attendanceQuery = query(
         collection(db, 'players', player.id, 'attendance'),
@@ -28,7 +28,7 @@ export default function PlayerProfile({ player, onClose, onEdit, onDelete }) {
     } finally {
       setLoadingAttendance(false);
     }
-  };
+  }, [player.id]);
 
   const tabs = [
     { id: 'contact', label: 'Contact Info', icon: '📞' },

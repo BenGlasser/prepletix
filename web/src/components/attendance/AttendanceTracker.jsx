@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Player } from '../../models/Player';
@@ -21,7 +21,7 @@ export default function AttendanceTracker() {
     if (players.length > 0) {
       loadAttendanceData();
     }
-  }, [players, selectedDate]);
+  }, [players, selectedDate, loadAttendanceData]);
 
   const loadPlayers = async () => {
     try {
@@ -43,7 +43,7 @@ export default function AttendanceTracker() {
     }
   };
 
-  const loadAttendanceData = async () => {
+  const loadAttendanceData = useCallback(async () => {
     const attendance = {};
     
     // Initialize all players with default attendance
@@ -79,7 +79,7 @@ export default function AttendanceTracker() {
     }
 
     setAttendanceData(attendance);
-  };
+  }, [players, selectedDate, eventType]);
 
   const updateAttendance = (playerId, field, value) => {
     setAttendanceData(prev => ({
@@ -130,7 +130,7 @@ export default function AttendanceTracker() {
     };
 
     Object.values(attendanceData).forEach(data => {
-      if (counts.hasOwnProperty(data.status)) {
+      if (Object.prototype.hasOwnProperty.call(counts, data.status)) {
         counts[data.status]++;
       }
     });

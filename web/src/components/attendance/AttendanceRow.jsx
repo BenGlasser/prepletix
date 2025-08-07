@@ -9,7 +9,6 @@ const statusOptions = [
 
 export default function AttendanceRow({ player, attendance, onUpdate }) {
   const primaryContact = player.contacts?.find(c => c.isPrimary) || player.contacts?.[0];
-  const currentStatus = statusOptions.find(s => s.value === attendance.status);
 
   return (
     <div className="p-4">

@@ -1,4 +1,4 @@
-import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Player, ParentContact, MedicalInfo } from '../models/Player';
 import { Drill } from '../models/PracticePlan';
