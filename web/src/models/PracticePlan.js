@@ -2,6 +2,7 @@
 export class PracticePlan {
   constructor(data = {}) {
     this.id = data.id || null;
+    this.teamId = data.teamId || ''; // REQUIRED: team this practice plan belongs to
     this.title = data.title || '';
     this.date = data.date || new Date().toISOString().split('T')[0];
     this.duration = data.duration || 90; // minutes
@@ -16,6 +17,7 @@ export class PracticePlan {
   // Convert to Firestore-friendly object
   toFirestore() {
     return {
+      teamId: this.teamId,
       title: this.title,
       date: this.date,
       duration: this.duration,
@@ -48,6 +50,7 @@ export class DrillSlot {
     this.duration = data.duration || 10; // minutes
     this.order = data.order || 0;
     this.notes = data.notes || '';
+    this.completed = data.completed || false; // track if drill is completed during practice
   }
 
   toFirestore() {
@@ -56,7 +59,8 @@ export class DrillSlot {
       drillName: this.drillName,
       duration: this.duration,
       order: this.order,
-      notes: this.notes
+      notes: this.notes,
+      completed: this.completed
     };
   }
 }
@@ -65,6 +69,7 @@ export class DrillSlot {
 export class Drill {
   constructor(data = {}) {
     this.id = data.id || null;
+    this.teamId = data.teamId || ''; // REQUIRED: team this drill belongs to (empty for global drills)
     this.name = data.name || '';
     this.category = data.category || 'general'; // warm-up, shooting, passing, defense, etc.
     this.description = data.description || '';
@@ -75,10 +80,15 @@ export class Drill {
     this.skillLevel = data.skillLevel || 'beginner'; // beginner, intermediate, advanced
     this.maxPlayers = data.maxPlayers || null;
     this.minPlayers = data.minPlayers || null;
+    this.notes = data.notes || ''; // additional coaching notes
+    this.videoUrl = data.videoUrl || ''; // video demonstration URL
+    this.createdBy = data.createdBy || ''; // coach who created this drill
+    this.isGlobal = data.isGlobal || false; // true for system-wide drills available to all teams
   }
 
   toFirestore() {
     return {
+      teamId: this.teamId,
       name: this.name,
       category: this.category,
       description: this.description,
@@ -88,7 +98,11 @@ export class Drill {
       ageGroup: this.ageGroup,
       skillLevel: this.skillLevel,
       maxPlayers: this.maxPlayers,
-      minPlayers: this.minPlayers
+      minPlayers: this.minPlayers,
+      notes: this.notes,
+      videoUrl: this.videoUrl,
+      createdBy: this.createdBy,
+      isGlobal: this.isGlobal
     };
   }
 

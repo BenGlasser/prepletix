@@ -82,3 +82,5 @@ The app uses Firebase services:
 ## Design Guidelines
 
 - Use heroicons for all iconography
+- Never use inline styles
+- Use @emotion/styled components for custom styles

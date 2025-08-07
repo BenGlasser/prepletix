@@ -7,8 +7,19 @@ const statusOptions = [
   { value: ATTENDANCE_STATUS.LEFT_EARLY, label: 'Left Early', color: 'text-orange-600' },
 ];
 
-export default function AttendanceRow({ player, attendance, onUpdate }) {
+export default function AttendanceRow({ player, attendance, onUpdate, onNoteSave }) {
   const primaryContact = player.contacts?.find(c => c.isPrimary) || player.contacts?.[0];
+  
+  const handleNoteKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onNoteSave(player.id);
+    }
+  };
+
+  const handleNoteBlur = () => {
+    onNoteSave(player.id);
+  };
 
   return (
     <div className="p-4">
@@ -82,6 +93,8 @@ export default function AttendanceRow({ player, attendance, onUpdate }) {
               placeholder="Note..."
               value={attendance.note}
               onChange={(e) => onUpdate('note', e.target.value)}
+              onKeyDown={handleNoteKeyDown}
+              onBlur={handleNoteBlur}
               className="w-32 px-2 py-1 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white rounded focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
@@ -93,7 +106,8 @@ export default function AttendanceRow({ player, attendance, onUpdate }) {
         attendance.status === ATTENDANCE_STATUS.PRESENT ? 'bg-green-200' :
         attendance.status === ATTENDANCE_STATUS.ABSENT ? 'bg-red-200' :
         attendance.status === ATTENDANCE_STATUS.LATE ? 'bg-yellow-200' :
-        'bg-orange-200'
+        attendance.status === ATTENDANCE_STATUS.LEFT_EARLY ? 'bg-orange-200' :
+        'bg-gray-100 dark:bg-gray-600' // No status selected
       }`} />
     </div>
   );

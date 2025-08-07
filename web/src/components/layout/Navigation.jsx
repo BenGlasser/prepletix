@@ -1,7 +1,10 @@
+import { useEffect } from "react";
 import { signOut } from "firebase/auth";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { auth } from "../../firebase";
+import { useTeam } from "../../contexts/TeamContext";
 import ThemeDropdown from "../ui/ThemeDropdown";
+import TeamSelector from "../teams/TeamSelector";
 
 const navigationItems = [
   {
@@ -57,9 +60,31 @@ const navigationItems = [
       </svg>
     ),
   },
+  {
+    path: "/drills",
+    label: "Drill Library",
+    icon: (
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-7 4h12l-2 5H9l-2-5z"
+        />
+      </svg>
+    ),
+  },
 ];
 
 export default function Navigation({ user }) {
+  const navigate = useNavigate();
+  const { currentTeam, loading } = useTeam();
+
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -67,6 +92,18 @@ export default function Navigation({ user }) {
       console.error("Error signing out:", error);
     }
   };
+
+  // Use useEffect to navigate to avoid infinite loops
+  useEffect(() => {
+    if (!loading && !currentTeam) {
+      navigate('/teams/setup');
+    }
+  }, [loading, currentTeam, navigate]);
+
+  // Don't render navigation if no team
+  if (!loading && !currentTeam) {
+    return null;
+  }
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-700/50">
@@ -78,6 +115,10 @@ export default function Navigation({ user }) {
                 Prepletix
               </h1>
             </div>
+            
+            {/* Team Selector */}
+            <TeamSelector />
+            
             <div className="flex space-x-2">
               {navigationItems.map((item) => (
                 <NavLink

@@ -2,6 +2,7 @@
 export class Player {
   constructor(data = {}) {
     this.id = data.id || null;
+    this.teamId = data.teamId || ''; // REQUIRED: team this player belongs to
     this.name = data.name || '';
     this.jerseyNumber = data.jerseyNumber || null;
     this.photoUrl = data.photoUrl || '';
@@ -10,11 +11,13 @@ export class Player {
     this.notes = data.notes || [];
     this.createdAt = data.createdAt || new Date();
     this.updatedAt = data.updatedAt || new Date();
+    this.createdBy = data.createdBy || ''; // coach who added this player
   }
 
   // Convert to Firestore-friendly object
   toFirestore() {
     return {
+      teamId: this.teamId,
       name: this.name,
       jerseyNumber: this.jerseyNumber,
       photoUrl: this.photoUrl,
@@ -50,7 +53,8 @@ export class Player {
         createdBy: note.createdBy
       })),
       createdAt: this.createdAt,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      createdBy: this.createdBy
     };
   }
 
