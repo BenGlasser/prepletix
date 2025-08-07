@@ -33,6 +33,20 @@ export function TeamProvider({ children }) {
     return teamArray.map(ensureTeamInstance);
   }, []);
 
+  const loadUserTeams = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const userTeams = await TeamService.getTeamsForCoach(user.uid);
+      setTeams(ensureTeamInstances(userTeams));
+    } catch (error) {
+      console.error('Error loading teams:', error);
+      setError('Failed to load teams');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.uid, ensureTeamInstances]);
+
   // Load teams for the current user
   useEffect(() => {
     if (user) {
@@ -61,20 +75,6 @@ export function TeamProvider({ children }) {
       localStorage.setItem('currentTeamId', currentTeam.id);
     }
   }, [currentTeam]);
-
-  const loadUserTeams = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const userTeams = await TeamService.getTeamsForCoach(user.uid);
-      setTeams(ensureTeamInstances(userTeams));
-    } catch (error) {
-      console.error('Error loading teams:', error);
-      setError('Failed to load teams');
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.uid, ensureTeamInstances]);
 
   const createTeam = async (teamData) => {
     try {

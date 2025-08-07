@@ -63,42 +63,6 @@ export default function PlayerRoster() {
     }
   }, []);
 
-  useEffect(() => {
-    if (currentTeam && !teamLoading) {
-      loadPlayers();
-    }
-  }, [currentTeam, teamLoading, loadPlayers]);
-
-  useEffect(() => {
-    if (players.length > 0) {
-      loadAttendanceStats(players);
-    }
-  }, [players, loadAttendanceStats]);
-
-  useEffect(() => {
-    if (playerId && players.length > 0) {
-      const player = players.find(p => p.id === playerId);
-      if (player) {
-        if (isEditMode) {
-          setEditingPlayer(player);
-          setShowForm(true);
-          setSelectedPlayer(null);
-        } else {
-          setSelectedPlayer(player);
-          setShowForm(false);
-          setEditingPlayer(null);
-        }
-      } else {
-        // If player not found in current list, try loading from Firestore
-        loadPlayerById(playerId);
-      }
-    } else if (!playerId) {
-      setSelectedPlayer(null);
-      setShowForm(false);
-      setEditingPlayer(null);
-    }
-  }, [playerId, players, isEditMode, loadPlayerById]);
-
   const loadPlayers = useCallback(async () => {
     if (!currentTeam) return;
     
@@ -145,6 +109,42 @@ export default function PlayerRoster() {
       navigate('/players');
     }
   }, [isEditMode, navigate]);
+
+  useEffect(() => {
+    if (currentTeam && !teamLoading) {
+      loadPlayers();
+    }
+  }, [currentTeam, teamLoading, loadPlayers]);
+
+  useEffect(() => {
+    if (players.length > 0) {
+      loadAttendanceStats(players);
+    }
+  }, [players, loadAttendanceStats]);
+
+  useEffect(() => {
+    if (playerId && players.length > 0) {
+      const player = players.find(p => p.id === playerId);
+      if (player) {
+        if (isEditMode) {
+          setEditingPlayer(player);
+          setShowForm(true);
+          setSelectedPlayer(null);
+        } else {
+          setSelectedPlayer(player);
+          setShowForm(false);
+          setEditingPlayer(null);
+        }
+      } else {
+        // If player not found in current list, try loading from Firestore
+        loadPlayerById(playerId);
+      }
+    } else if (!playerId) {
+      setSelectedPlayer(null);
+      setShowForm(false);
+      setEditingPlayer(null);
+    }
+  }, [playerId, players, isEditMode, loadPlayerById]);
 
   const handleAddPlayer = () => {
     setEditingPlayer(null);
