@@ -1,13 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { collection, getDocs, deleteDoc, doc, getDoc, query, where } from 'firebase/firestore';
-import { db } from '../../firebase';
-import { useTeam } from '../../contexts/TeamContext';
-import { Player } from '../../models/Player';
-import { AttendanceRecord, EVENT_TYPES } from '../../models/Attendance';
-import PlayerCard from './PlayerCard';
-import PlayerForm from './PlayerForm';
-import PlayerProfile from './PlayerProfile';
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+  getDoc,
+  query,
+  where,
+} from "firebase/firestore";
+import { db } from "../../firebase";
+import { useTeam } from "../../contexts/TeamContext";
+import { Player } from "../../models/Player";
+import { AttendanceRecord, EVENT_TYPES } from "../../models/Attendance";
+import PlayerCard from "./PlayerCard";
+import PlayerForm from "./PlayerForm";
+import PlayerProfile from "./PlayerProfile";
 
 export default function PlayerRoster() {
   const { playerId, teamId } = useParams();
@@ -25,26 +33,44 @@ export default function PlayerRoster() {
 
     try {
       for (const player of playerList) {
-        const attendanceQuery = collection(db, 'players', player.id, 'attendance');
+        const attendanceQuery = collection(
+          db,
+          "players",
+          player.id,
+          "attendance"
+        );
         const snapshot = await getDocs(attendanceQuery);
-        const records = snapshot.docs.map(doc => AttendanceRecord.fromFirestore(doc));
-        
+        const records = snapshot.docs.map((doc) =>
+          AttendanceRecord.fromFirestore(doc)
+        );
+
         // Calculate attendance statistics with weighted values
         const totalRecords = records.length;
-        const presentCount = records.filter(r => r.status === 'present').length;
-        const absentCount = records.filter(r => r.status === 'absent').length;
-        const lateCount = records.filter(r => r.status === 'late').length;
-        const leftEarlyCount = records.filter(r => r.status === 'left_early').length;
-        
+        const presentCount = records.filter(
+          (r) => r.status === "present"
+        ).length;
+        const absentCount = records.filter((r) => r.status === "absent").length;
+        const lateCount = records.filter((r) => r.status === "late").length;
+        const leftEarlyCount = records.filter(
+          (r) => r.status === "left_early"
+        ).length;
+
         // Calculate weighted attendance rate
         // Present = 1, Absent = 0, Late = 0.5, Left Early = 0.5
-        const weightedScore = (presentCount * 1) + (absentCount * 0) + (lateCount * 0.5) + (leftEarlyCount * 0.5);
-        const attendanceRate = totalRecords > 0 ? Math.round((weightedScore / totalRecords) * 100) : 0;
-        
+        const weightedScore =
+          presentCount * 1 +
+          absentCount * 0 +
+          lateCount * 0.5 +
+          leftEarlyCount * 0.5;
+        const attendanceRate =
+          totalRecords > 0
+            ? Math.round((weightedScore / totalRecords) * 100)
+            : 0;
+
         // Get today's status
-        const today = new Date().toISOString().split('T')[0];
-        const todayRecord = records.find(r => r.date === today);
-        
+        const today = new Date().toISOString().split("T")[0];
+        const todayRecord = records.find((r) => r.date === today);
+
         stats[player.id] = {
           total: totalRecords,
           present: presentCount,
@@ -53,68 +79,75 @@ export default function PlayerRoster() {
           leftEarly: leftEarlyCount,
           attendanceRate,
           todayStatus: todayRecord?.status || null,
-          lastEventDate: records.length > 0 ? records.sort((a, b) => new Date(b.date) - new Date(a.date))[0].date : null
+          lastEventDate:
+            records.length > 0
+              ? records.sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+                  .date
+              : null,
         };
       }
       setAttendanceStats(stats);
     } catch (error) {
-      console.error('Error loading attendance stats:', error);
+      console.error("Error loading attendance stats:", error);
     }
   }, []);
 
   const loadPlayers = useCallback(async () => {
     if (!currentTeam) return;
-    
+
     try {
       // Query players filtered by current team
       const playersQuery = query(
-        collection(db, 'players'),
-        where('teamId', '==', currentTeam.id)
+        collection(db, "players"),
+        where("teamId", "==", currentTeam.id)
       );
       const snapshot = await getDocs(playersQuery);
-      const playerList = snapshot.docs.map(doc => Player.fromFirestore(doc));
+      const playerList = snapshot.docs.map((doc) => Player.fromFirestore(doc));
       setPlayers(playerList);
       // Load attendance statistics after players are loaded
       if (playerList.length > 0) {
         await loadAttendanceStats(playerList);
       }
     } catch (error) {
-      console.error('Error loading players:', error);
+      console.error("Error loading players:", error);
     } finally {
       setLoading(false);
     }
   }, [currentTeam, loadAttendanceStats]);
 
-  const loadPlayerById = useCallback(async (id) => {
-    if (!currentTeam) {
-      // Wait for team to be loaded
-      return;
-    }
-    
-    try {
-      const playerDoc = await getDoc(doc(db, 'players', id));
-      if (playerDoc.exists()) {
-        const player = Player.fromFirestore(playerDoc);
-        
-        // Check if player belongs to current team
-        if (player.teamId !== currentTeam.id) {
-          console.warn('Player does not belong to current team');
+  const loadPlayerById = useCallback(
+    async (id) => {
+      if (!currentTeam) {
+        // Wait for team to be loaded
+        return;
+      }
+
+      try {
+        const playerDoc = await getDoc(doc(db, "players", id));
+        if (playerDoc.exists()) {
+          const player = Player.fromFirestore(playerDoc);
+
+          // Check if player belongs to current team
+          if (player.teamId !== currentTeam.id) {
+            console.warn("Player does not belong to current team");
+            navigate(`/teams/${teamId}/players`);
+            return;
+          }
+
+          setSelectedPlayer(player);
+          setShowForm(false);
+          setEditingPlayer(null);
+        } else {
+          // Player not found, navigate back to players list
           navigate(`/teams/${teamId}/players`);
-          return;
         }
-        
-        setSelectedPlayer(player);
-        setShowForm(false);
-        setEditingPlayer(null);
-      } else {
-        // Player not found, navigate back to players list
+      } catch (error) {
+        console.error("Error loading player:", error);
         navigate(`/teams/${teamId}/players`);
       }
-    } catch (error) {
-      console.error('Error loading player:', error);
-      navigate(`/teams/${teamId}/players`);
-    }
-  }, [currentTeam, navigate]);
+    },
+    [currentTeam, navigate, teamId]
+  );
 
   useEffect(() => {
     if (currentTeam && !teamLoading) {
@@ -132,7 +165,7 @@ export default function PlayerRoster() {
     if (playerId) {
       if (players.length > 0) {
         // Players are loaded, look for the specific player
-        const player = players.find(p => p.id === playerId);
+        const player = players.find((p) => p.id === playerId);
         if (player) {
           setSelectedPlayer(player);
           setShowForm(false);
@@ -158,18 +191,13 @@ export default function PlayerRoster() {
     setShowForm(true);
   };
 
-  const handleEditPlayer = (player) => {
-    // Navigate directly to the player profile page (which now has inline editing)
-    navigate(`/teams/${teamId}/players/${player.id}`);
-  };
-
   const handleDeletePlayer = async (playerId) => {
-    if (window.confirm('Are you sure you want to delete this player?')) {
+    if (window.confirm("Are you sure you want to delete this player?")) {
       try {
-        await deleteDoc(doc(db, 'players', playerId));
+        await deleteDoc(doc(db, "players", playerId));
         await loadPlayers();
       } catch (error) {
-        console.error('Error deleting player:', error);
+        console.error("Error deleting player:", error);
       }
     }
   };
@@ -190,23 +218,21 @@ export default function PlayerRoster() {
 
   const handlePhotoUpdate = (playerId, photoUrl) => {
     // Update the player in the local state
-    setPlayers(prevPlayers => 
-      prevPlayers.map(player => 
-        player.id === playerId 
-          ? { ...player, photoUrl }
-          : player
+    setPlayers((prevPlayers) =>
+      prevPlayers.map((player) =>
+        player.id === playerId ? { ...player, photoUrl } : player
       )
     );
-    
+
     // Update selected player if it's the same one
     if (selectedPlayer && selectedPlayer.id === playerId) {
-      setSelectedPlayer(prev => ({ ...prev, photoUrl }));
+      setSelectedPlayer((prev) => ({ ...prev, photoUrl }));
     }
   };
 
   if (showForm) {
     return (
-      <PlayerForm 
+      <PlayerForm
         player={editingPlayer}
         teamId={currentTeam?.id}
         onClose={handleFormClose}
@@ -216,8 +242,8 @@ export default function PlayerRoster() {
 
   if (selectedPlayer) {
     return (
-      <PlayerProfile 
-        player={selectedPlayer} 
+      <PlayerProfile
+        player={selectedPlayer}
         onClose={handleProfileClose}
         onDelete={() => handleDeletePlayer(selectedPlayer.id)}
       />
@@ -227,7 +253,9 @@ export default function PlayerRoster() {
   if (teamLoading || loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500 dark:text-gray-400">Loading players...</div>
+        <div className="text-gray-500 dark:text-gray-400">
+          Loading players...
+        </div>
       </div>
     );
   }
@@ -236,8 +264,12 @@ export default function PlayerRoster() {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-center">
-          <div className="text-gray-500 dark:text-gray-400 mb-2">No team selected</div>
-          <div className="text-sm text-gray-400">Please select or create a team to view players.</div>
+          <div className="text-gray-500 dark:text-gray-400 mb-2">
+            No team selected
+          </div>
+          <div className="text-sm text-gray-400">
+            Please select or create a team to view players.
+          </div>
         </div>
       </div>
     );
@@ -248,31 +280,58 @@ export default function PlayerRoster() {
       <div className="px-6 py-8 min-h-full">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Team Roster</h2>
-            <p className="text-gray-600 dark:text-gray-400">Manage your team players and their information</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Team Roster
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Manage your team players and their information
+            </p>
           </div>
           <button
             onClick={handleAddPlayer}
             className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-3 rounded-2xl hover:from-primary-700 hover:to-primary-800 flex items-center space-x-2 shadow-lg shadow-primary-600/25 transition-all duration-200 hover:scale-105"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
             </svg>
             <span>Add Player</span>
           </button>
         </div>
 
-
         {players.length === 0 ? (
           <div className="text-center py-16">
             <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-3xl p-12 border border-gray-200/50 dark:border-gray-700/50 max-w-md mx-auto">
               <div className="w-16 h-16 bg-gradient-to-r from-primary-600 to-secondary-400 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                <svg
+                  className="w-8 h-8 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
+                  />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Players Yet</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">Start building your team by adding your first player</p>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                No Players Yet
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Start building your team by adding your first player
+              </p>
               <button
                 onClick={handleAddPlayer}
                 className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-3 rounded-2xl hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-600/25"
