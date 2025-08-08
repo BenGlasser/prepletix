@@ -216,21 +216,50 @@ export class CoachService {
    */
   static async removeCoachFromTeam(coachUid, teamId) {
     try {
-      const batch = writeBatch(db);
+      console.log(`🗑️ CoachService: Starting removal of coach ${coachUid} from team ${teamId}`);
       
       const coach = await this.getCoachByUid(coachUid);
       if (!coach) {
         throw new Error('Coach not found');
       }
 
+      console.log(`🗑️ CoachService: Coach found, current teams:`, coach.teams);
+
       // Remove team from coach
       coach.removeTeam(teamId);
-      
+      console.log(`🗑️ CoachService: After removal, coach teams:`, coach.teams);
+
+      // Update coach document
       const coachRef = doc(db, 'coaches', coachUid);
-      batch.update(coachRef, {
+      
+      // Validate the data before updating
+      console.log(`🔍 CoachService: About to update coach document with:`, {
         teams: coach.teams,
-        updatedAt: coach.updatedAt
+        teamsType: typeof coach.teams,
+        teamsIsArray: Array.isArray(coach.teams),
+        teamsContent: coach.teams.map(t => ({ value: t, type: typeof t })),
+        updatedAt: new Date()
       });
+      
+      // Ensure teams is a clean array of strings
+      const cleanTeams = coach.teams.filter(teamId => 
+        teamId && typeof teamId === 'string' && teamId.trim().length > 0
+      );
+      
+      console.log(`🔍 CoachService: Cleaned teams array:`, cleanTeams);
+      
+      try {
+        await updateDoc(coachRef, {
+          teams: cleanTeams,
+          updatedAt: new Date()
+        });
+        console.log(`✅ CoachService: Updated coach document`);
+      } catch (updateError) {
+        console.error(`🚨 CoachService: Failed to update coach document:`, updateError);
+        console.error(`🚨 CoachService: Coach document ID:`, coachUid);
+        console.error(`🚨 CoachService: Update data:`, { teams: cleanTeams, updatedAt: new Date() });
+        throw updateError;
+      }
 
       // Update team's coach references
       const teamRef = doc(db, 'teams', teamId);
@@ -238,20 +267,31 @@ export class CoachService {
       
       if (teamDoc.exists()) {
         const teamData = teamDoc.data();
-        const coaches = (teamData.coaches || []).filter(uid => uid !== coachUid);
+        const originalCoaches = teamData.coaches || [];
+        const updatedCoaches = originalCoaches.filter(uid => uid !== coachUid);
         
-        batch.update(teamRef, { 
-          coaches, 
+        console.log(`🗑️ CoachService: Team coaches before:`, originalCoaches);
+        console.log(`🗑️ CoachService: Team coaches after:`, updatedCoaches);
+        
+        await updateDoc(teamRef, { 
+          coaches: updatedCoaches, 
           updatedAt: new Date() 
         });
+        console.log(`✅ CoachService: Updated team document`);
+      } else {
+        console.warn(`⚠️ CoachService: Team ${teamId} not found`);
       }
-
-      await batch.commit();
       
-      console.log(`✅ CoachService: Removed coach ${coachUid} from team ${teamId}`);
+      console.log(`✅ CoachService: Successfully removed coach ${coachUid} from team ${teamId}`);
       return coach;
     } catch (error) {
-      console.error('Error removing coach from team:', error);
+      console.error('🚨 CoachService: Error removing coach from team:', error);
+      console.error('🚨 CoachService: Error details:', {
+        coachUid,
+        teamId,
+        errorCode: error.code,
+        errorMessage: error.message
+      });
       throw error;
     }
   }
@@ -263,34 +303,45 @@ export class CoachService {
    */
   static async getCoachesForTeam(teamId) {
     try {
-      // Query coaches who have this team in their teams array
-      const coachesRef = collection(db, 'coaches');
-      const q = query(coachesRef, where('teams', 'array-contains-any', [
-        { teamId, isActive: true },
-        { teamId } // For backwards compatibility during migration
-      ]));
+      console.log(`🔍 CoachService: Looking for coaches on team ${teamId}`);
       
+      // Since teams array now contains team IDs (strings), we need to use array-contains
+      const coachesRef = collection(db, 'coaches');
+      const q = query(coachesRef, where('teams', 'array-contains', teamId));
+      
+      console.log(`🔍 CoachService: Running query: coaches where teams array-contains "${teamId}"`);
       const snapshot = await getDocs(q);
-      const coaches = snapshot.docs
-        .map(doc => Coach.fromFirestore(doc))
-        .filter(coach => coach.isOnTeam(teamId));
+      console.log(`🔍 CoachService: Query returned ${snapshot.size} documents`);
+      
+      const coaches = snapshot.docs.map(doc => {
+        const coach = Coach.fromFirestore(doc);
+        console.log(`🔍 CoachService: Coach ${coach.uid} (${coach.getDisplayName()}) has teams:`, coach.teams);
+        return coach;
+      });
       
       console.log(`📋 CoachService: Found ${coaches.length} coaches for team ${teamId}`);
       return coaches;
     } catch (error) {
-      console.error('Error getting coaches for team:', error);
+      console.error('🚨 CoachService: Error getting coaches for team:', error);
       // Fallback to simpler query
       try {
+        console.log('🔄 CoachService: Trying fallback - get all coaches and filter client-side');
         const coachesRef = collection(db, 'coaches');
         const snapshot = await getDocs(coachesRef);
+        console.log(`🔄 CoachService: Fallback got ${snapshot.size} total coaches`);
+        
         const coaches = snapshot.docs
           .map(doc => Coach.fromFirestore(doc))
-          .filter(coach => coach.isOnTeam(teamId));
+          .filter(coach => {
+            const isOnTeam = coach.isOnTeam(teamId);
+            console.log(`🔄 CoachService: Coach ${coach.uid} isOnTeam(${teamId}):`, isOnTeam, 'teams:', coach.teams);
+            return isOnTeam;
+          });
         
         console.log(`📋 CoachService: Fallback found ${coaches.length} coaches for team ${teamId}`);
         return coaches;
       } catch (fallbackError) {
-        console.error('Error in fallback query:', fallbackError);
+        console.error('🚨 CoachService: Error in fallback query:', fallbackError);
         return [];
       }
     }
@@ -310,9 +361,39 @@ export class CoachService {
         return [];
       }
       
-      return coach.getActiveTeams(); // Now returns array of team IDs
+      // Check if teams array needs migration from objects to strings
+      const teams = coach.getActiveTeams();
+      console.log('🔍 CoachService: Coach teams before processing:', teams);
+      
+      if (teams.length > 0 && typeof teams[0] === 'object') {
+        console.log('🔧 CoachService: Detected old object format in teams array, migrating...');
+        
+        // Convert objects to team ID strings
+        const teamIds = teams.map(team => {
+          if (typeof team === 'string') return team;
+          return team.teamId || team.id || team;
+        }).filter(id => typeof id === 'string');
+        
+        console.log('🔧 CoachService: Migrated team IDs:', teamIds);
+        
+        // Update the coach document with the correct format
+        try {
+          const coachRef = doc(db, 'coaches', coachUid);
+          await updateDoc(coachRef, {
+            teams: teamIds,
+            updatedAt: new Date()
+          });
+          console.log('✅ CoachService: Successfully migrated coach teams array to string format');
+          return teamIds;
+        } catch (updateError) {
+          console.error('🚨 CoachService: Failed to migrate teams array:', updateError);
+          return teamIds; // Return the converted IDs even if update failed
+        }
+      }
+      
+      return teams; // Already in correct format
     } catch (error) {
-      console.error('Error getting teams for coach:', error);
+      console.error('🚨 CoachService: Error getting teams for coach:', error);
       if (error.code === 'permission-denied') {
         console.log('💡 Firestore permission denied - coach profile may not exist yet');
       }
@@ -349,18 +430,25 @@ export class CoachService {
    * @returns {Function} Unsubscribe function
    */
   static subscribeToTeamCoaches(teamId, callback) {
-    // This is a bit complex with Firestore's query limitations
-    // For now, we'll use a simpler approach and filter client-side
-    const coachesRef = collection(db, 'coaches');
+    console.log(`🔔 CoachService: Setting up subscription for coaches on team ${teamId}`);
     
-    return onSnapshot(coachesRef, (snapshot) => {
-      const coaches = snapshot.docs
-        .map(doc => Coach.fromFirestore(doc))
-        .filter(coach => coach.isOnTeam(teamId));
+    // Use array-contains to find coaches who have this teamId in their teams array
+    const coachesRef = collection(db, 'coaches');
+    const q = query(coachesRef, where('teams', 'array-contains', teamId));
+    
+    return onSnapshot(q, (snapshot) => {
+      console.log(`🔔 CoachService: Subscription fired, got ${snapshot.size} coaches for team ${teamId}`);
       
+      const coaches = snapshot.docs.map(doc => {
+        const coach = Coach.fromFirestore(doc);
+        console.log(`🔔 CoachService: Subscription coach ${coach.uid} (${coach.getDisplayName()}) teams:`, coach.teams);
+        return coach;
+      });
+      
+      console.log(`🔔 CoachService: Subscription returning ${coaches.length} coaches`);
       callback(coaches);
     }, (error) => {
-      console.error('Error in team coaches subscription:', error);
+      console.error('🚨 CoachService: Error in team coaches subscription:', error);
       callback([]);
     });
   }

@@ -7,15 +7,13 @@ import {
   query,
   orderBy,
   doc,
-  deleteDoc,
-  where,
-  getDocs,
   getDoc,
 } from "firebase/firestore";
-import { db, storage } from "../../firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db } from "../../firebase";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTeam } from "../../contexts/TeamContext";
+import { CoachService } from "../../services/coachService";
+import { TeamService } from "../../services/teamService";
 import {
   PlusIcon,
   TrashIcon,
@@ -47,42 +45,23 @@ const getUserColor = (email) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-// Generate invitation code
-const generateInvitationCode = () => {
-  return (
-    Math.random().toString(36).substring(2, 15) +
-    Math.random().toString(36).substring(2, 15)
-  );
-};
-
-// Function to download profile picture and upload to Firebase Storage
-const uploadProfilePictureToStorage = async (photoURL, userId) => {
-  if (!photoURL) return null;
+// Helper to convert Coach objects to display format
+const formatCoachForDisplay = (coach, currentTeam) => {
+  if (!coach || !currentTeam) return null;
   
-  try {
-    // Download the image from Google
-    const response = await fetch(photoURL);
-    if (!response.ok) {
-      console.warn("Failed to fetch profile picture:", response.statusText);
-      return null;
-    }
-    
-    const blob = await response.blob();
-    
-    // Create a reference to store the image in Firebase Storage
-    const imageRef = ref(storage, `profile-pictures/${userId}.jpg`);
-    
-    // Upload the image
-    await uploadBytes(imageRef, blob);
-    
-    // Get the download URL
-    const downloadURL = await getDownloadURL(imageRef);
-    
-    return downloadURL;
-  } catch (error) {
-    console.error("Error uploading profile picture to storage:", error);
-    return null;
-  }
+  // Handle both Team instance and plain object
+  const isOwner = currentTeam.isHeadCoach 
+    ? currentTeam.isHeadCoach(coach.uid) 
+    : currentTeam.createdBy === coach.uid;
+  
+  return {
+    id: coach.uid,
+    name: coach.getDisplayName(),
+    email: coach.profile.email,
+    photoURL: coach.profile.photoURL,
+    isOwner: isOwner,
+    uid: coach.uid
+  };
 };
 
 export default function Coaches() {
@@ -128,66 +107,77 @@ export default function Coaches() {
     scrollToBottom();
   }, [messages]);
 
-  // Auto-add current user as coach
+  // Ensure current user has coach profile (handled by CoachService)
   const ensureCurrentUserAsCoach = useCallback(async () => {
-    if (!teamId || !user) return;
+    if (!user) return;
 
     try {
-      const coachesRef = collection(db, "teams", teamId, "coaches");
-      const q = query(
-        coachesRef,
-        where("email", "==", user.email.toLowerCase())
-      );
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        // Upload profile picture to Firebase Storage if available
-        const uploadedPhotoURL = await uploadProfilePictureToStorage(user.photoURL, user.uid);
-        
-        // Current user is not in coaches list, add them
-        await addDoc(coachesRef, {
-          email: user.email.toLowerCase(),
-          name: user.displayName || user.email.split("@")[0],
-          createdAt: new Date(),
-          addedBy: user.uid,
-          addedByName: user.displayName || user.email,
-          isOwner: true, // Mark as team owner/creator
-          photoURL: uploadedPhotoURL, // Use uploaded Storage URL
-        });
-      }
+      // CoachService will ensure the coach profile exists in the coach-centric model
+      await CoachService.ensureCoachProfile(user);
+      console.log("✅ Coach profile ensured for current user:", user.uid);
     } catch (error) {
-      console.error("Error ensuring current user as coach:", error);
+      console.error("Error ensuring current user coach profile:", error);
     }
-  }, [teamId, user]);
+  }, [user]);
 
-  // Load coaches when team is available
+  // Load coaches when team is available using CoachService
   useEffect(() => {
-    if (teamId) {
-      // First ensure current user is added as coach
+    if (teamId && currentTeam) {
+      console.log("📋 Coaches.jsx: Loading coaches for team:", {
+        teamId,
+        teamName: currentTeam.name,
+        teamCoachesArray: currentTeam.coaches
+      });
+
+      // First ensure current user has coach profile
       ensureCurrentUserAsCoach();
 
-      const coachesRef = collection(db, "teams", teamId, "coaches");
-      const q = query(coachesRef, orderBy("createdAt", "asc"));
+      // Try direct fetch first for debugging
+      const loadCoachesDirectly = async () => {
+        try {
+          console.log("📋 Coaches.jsx: Using CoachService.getCoachesForTeam directly for debugging");
+          const directCoaches = await CoachService.getCoachesForTeam(teamId);
+          console.log("📋 Coaches.jsx: Direct fetch result:", {
+            count: directCoaches.length,
+            coaches: directCoaches.map(c => ({ uid: c.uid, name: c.getDisplayName(), teams: c.teams }))
+          });
+        } catch (error) {
+          console.error("📋 Coaches.jsx: Error in direct fetch:", error);
+        }
+      };
+      loadCoachesDirectly();
 
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const coachesData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setCoaches(coachesData);
-          setLoading(false);
-        },
-        (error) => {
-          console.error("Error fetching coaches:", error);
+      // Subscribe to coaches for this team using CoachService
+      const unsubscribe = CoachService.subscribeToTeamCoaches(
+        teamId,
+        (teamCoaches) => {
+          console.log("📋 Coaches.jsx: Received coaches from CoachService subscription:", {
+            count: teamCoaches.length,
+            coaches: teamCoaches.map(c => ({ 
+              uid: c.uid, 
+              name: c.getDisplayName(), 
+              teams: c.teams,
+              isOnTeam: c.isOnTeam(teamId)
+            }))
+          });
+          
+          // Format coaches for display with proper role information
+          const formattedCoaches = teamCoaches
+            .map(coach => formatCoachForDisplay(coach, currentTeam))
+            .filter(Boolean); // Remove any null entries
+          
+          console.log("📋 Coaches.jsx: Formatted coaches for display:", formattedCoaches);
+          setCoaches(formattedCoaches);
           setLoading(false);
         }
       );
 
       return unsubscribe;
+    } else {
+      setCoaches([]);
+      setLoading(false);
     }
-  }, [teamId, ensureCurrentUserAsCoach]);
+  }, [teamId, currentTeam, ensureCurrentUserAsCoach]);
 
   // Load messages when team is available
   useEffect(() => {
@@ -256,13 +246,15 @@ export default function Coaches() {
     setShowAddCoach(false);
   };
 
-  const handleRemoveCoach = async (coachId) => {
-    if (!teamId) return;
+  const handleRemoveCoach = async (coachUid) => {
+    if (!teamId || !coachUid) return;
 
     try {
-      await deleteDoc(doc(db, "teams", teamId, "coaches", coachId));
+      console.log("🗑️ Coaches.jsx: Removing coach from team:", { coachUid, teamId });
+      await TeamService.removeCoachFromTeam(teamId, coachUid);
+      console.log("✅ Coaches.jsx: Coach removed successfully");
     } catch (error) {
-      console.error("Error removing coach:", error);
+      console.error("❌ Coaches.jsx: Error removing coach:", error);
     }
   };
 
@@ -272,7 +264,7 @@ export default function Coaches() {
 
     try {
       // Find the current user's coach record to get their saved photo
-      const currentUserCoach = coaches.find(coach => coach.userId === user.uid);
+      const currentUserCoach = coaches.find(coach => coach.uid === user.uid);
       
       const messagesRef = collection(db, "teams", teamId, "messages");
       await addDoc(messagesRef, {
@@ -462,9 +454,9 @@ export default function Coaches() {
                               </div>
                             </div>
                           </div>
-                          {coach.email !== user.email && !coach.isOwner && (
+                          {coach.uid !== user.uid && !coach.isOwner && (
                             <button
-                              onClick={() => handleRemoveCoach(coach.id)}
+                              onClick={() => handleRemoveCoach(coach.uid)}
                               className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                               title="Remove Coach"
                             >

@@ -53,6 +53,7 @@ export class TeamService {
       // Get team IDs from coach profile
       const teamIds = await CoachService.getTeamsForCoach(coachUid);
       console.log('🍕 TeamService: Coach is on teams:', teamIds);
+      console.log('🍕 TeamService: Team IDs types:', teamIds.map(id => ({ id, type: typeof id, isString: typeof id === 'string' })));
       
       if (teamIds.length === 0) {
         return [];
@@ -62,12 +63,21 @@ export class TeamService {
       const teams = [];
       for (const teamId of teamIds) {
         try {
-          const team = await this.getTeamById(teamId);
+          // Handle both string IDs and object format for migration
+          const actualTeamId = typeof teamId === 'string' ? teamId : teamId?.teamId || teamId?.id;
+          console.log('🍕 TeamService: Processing team ID:', { original: teamId, actual: actualTeamId, type: typeof actualTeamId });
+          
+          if (!actualTeamId || typeof actualTeamId !== 'string') {
+            console.warn('🍕 TeamService: Invalid team ID format:', teamId);
+            continue;
+          }
+          
+          const team = await this.getTeamById(actualTeamId);
           if (team && team.isActive) {
             teams.push(team);
           }
         } catch (error) {
-          console.warn(`Failed to load team ${teamId}:`, error);
+          console.warn(`🍕 TeamService: Failed to load team`, { teamId, error: error.message });
         }
       }
       
