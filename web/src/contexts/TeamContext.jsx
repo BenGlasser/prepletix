@@ -1,8 +1,14 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContext';
-import { TeamService } from '../services/teamService';
-import { CoachService } from '../services/coachService';
-import { Team } from '../models/Team';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { useAuth } from "./AuthContext";
+import { TeamService } from "../services/teamService";
+import { CoachService } from "../services/coachService";
+import { Team } from "../models/Team";
 
 const TeamContext = createContext();
 
@@ -10,7 +16,7 @@ const TeamContext = createContext();
 export function useTeam() {
   const context = useContext(TeamContext);
   if (!context) {
-    throw new Error('useTeam must be used within a TeamProvider');
+    throw new Error("useTeam must be used within a TeamProvider");
   }
   return context;
 }
@@ -25,7 +31,7 @@ export function TeamProvider({ children }) {
 
   // Helper function to ensure teams are proper Team instances
   const ensureTeamInstance = (team) => {
-    if (team && typeof team === 'object' && !team.getSeasonDisplay) {
+    if (team && typeof team === "object" && !team.getSeasonDisplay) {
       return new Team(team);
     }
     return team;
@@ -39,66 +45,94 @@ export function TeamProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-      console.log('🍕 TeamContext: Loading teams for coach:', user.uid);
-      
+      console.log("🍕 TeamContext: Loading teams for coach:", user.uid);
+
       // Ensure coach profile exists before trying to load teams
       try {
         const coachProfile = await CoachService.ensureCoachProfile(user);
-        console.log('✅ TeamContext: Coach profile verified/created:', coachProfile);
+        console.log(
+          "✅ TeamContext: Coach profile verified/created:",
+          coachProfile
+        );
       } catch (profileError) {
-        console.warn('⚠️ TeamContext: Could not ensure coach profile:', profileError);
+        console.warn(
+          "⚠️ TeamContext: Could not ensure coach profile:",
+          profileError
+        );
         // Continue anyway - the fallback method should still work
       }
-      
+
       const userTeams = await TeamService.getTeamsForCoach(user.uid);
-      console.log('🍕 TeamContext: Loaded teams result:', {
+      console.log("🍕 TeamContext: Loaded teams result:", {
         teamsCount: userTeams.length,
-        teams: userTeams.map(t => ({ id: t.id, name: t.name }))
+        teams: userTeams.map((t) => ({ id: t.id, name: t.name })),
       });
-      
+
       const teamInstances = ensureTeamInstances(userTeams);
-      console.log('🍕 TeamContext: Setting teams in state:', {
+      console.log("🍕 TeamContext: Setting teams in state:", {
         teamsCount: teamInstances.length,
-        teamNames: teamInstances.map(t => ({ id: t.id, name: t.name }))
+        teamNames: teamInstances.map((t) => ({ id: t.id, name: t.name })),
       });
       setTeams(teamInstances);
-      
+
       // If no teams loaded, try to handle the specific team from URL as fallback
       if (userTeams.length === 0) {
-        console.warn('⚠️ TeamContext: No teams found for coach. This might indicate:');
-        console.warn('   1. The coach-centric migration needs to be run');
-        console.warn('   2. The coach was not properly added to any teams');
-        console.warn('   3. Team data is in old embedded format');
-        console.warn('   💡 Run migration tool in Settings > Data Model Migration');
-        
+        console.warn(
+          "⚠️ TeamContext: No teams found for coach. This might indicate:"
+        );
+        console.warn("   1. The coach-centric migration needs to be run");
+        console.warn("   2. The coach was not properly added to any teams");
+        console.warn("   3. Team data is in old embedded format");
+        console.warn(
+          "   💡 Run migration tool in Settings > Data Model Migration"
+        );
+
         // Emergency fallback: if user is on a team route, try to load that specific team
         const currentPath = window.location.pathname;
-        const teamRouteMatch = currentPath.match(/^\/teams\/([^\/]+)/);
+        const teamRouteMatch = currentPath.match(/^\/teams\/([^/]+)/);
         if (teamRouteMatch) {
           const urlTeamId = teamRouteMatch[1];
-          console.log('🚑 TeamContext: Emergency fallback - trying to load team from URL:', urlTeamId);
+          console.log(
+            "🚑 TeamContext: Emergency fallback - trying to load team from URL:",
+            urlTeamId
+          );
           try {
             const specificTeam = await TeamService.getTeamById(urlTeamId);
-            if (specificTeam && (specificTeam.isCoach(user.uid) || specificTeam.isHeadCoach(user.uid))) {
-              console.log('✅ TeamContext: Emergency fallback successful - loaded team:', specificTeam.name);
+            if (
+              specificTeam &&
+              (specificTeam.isCoach(user.uid) ||
+                specificTeam.isHeadCoach(user.uid))
+            ) {
+              console.log(
+                "✅ TeamContext: Emergency fallback successful - loaded team:",
+                specificTeam.name
+              );
               setTeams([specificTeam]);
               setCurrentTeam(specificTeam);
             } else {
-              console.warn('❌ TeamContext: User does not have access to team:', urlTeamId);
+              console.warn(
+                "❌ TeamContext: User does not have access to team:",
+                urlTeamId
+              );
             }
           } catch (fallbackError) {
-            console.error('❌ TeamContext: Emergency fallback failed:', fallbackError);
+            console.error(
+              "❌ TeamContext: Emergency fallback failed:",
+              fallbackError
+            );
           }
         }
       }
     } catch (error) {
-      console.error('❌ TeamContext: Error loading teams:', error);
-      console.error('   This might indicate the coach-centric migration needs to be run');
-      setError('Failed to load teams');
+      console.error("❌ TeamContext: Error loading teams:", error);
+      console.error(
+        "   This might indicate the coach-centric migration needs to be run"
+      );
+      setError("Failed to load teams");
     } finally {
       setLoading(false);
     }
-  }, [user?.uid, ensureTeamInstances]);
+  }, [user, ensureTeamInstances]);
 
   // Load teams for the current user
   useEffect(() => {
@@ -115,33 +149,33 @@ export function TeamProvider({ children }) {
   useEffect(() => {
     if (teams.length > 0 && !currentTeam) {
       // Try localStorage first
-      const savedTeamId = localStorage.getItem('currentTeamId');
-      
+      const savedTeamId = localStorage.getItem("currentTeamId");
+
       // Check if user is on a team route and extract team ID from URL
       const currentPath = window.location.pathname;
-      const teamRouteMatch = currentPath.match(/^\/teams\/([^\/]+)/);
+      const teamRouteMatch = currentPath.match(/^\/teams\/([^/]+)/);
       const urlTeamId = teamRouteMatch ? teamRouteMatch[1] : null;
-      
-      console.log('🍕 TeamContext: Setting current team from:', {
+
+      console.log("🍕 TeamContext: Setting current team from:", {
         savedTeamId,
         urlTeamId,
         currentPath,
-        availableTeams: teams.map(t => ({ id: t.id, name: t.name }))
+        availableTeams: teams.map((t) => ({ id: t.id, name: t.name })),
       });
-      
+
       // Priority: URL team ID (if valid) > saved team ID > first team
       let teamToSet = null;
-      if (urlTeamId && teams.find(t => t.id === urlTeamId)) {
-        teamToSet = teams.find(t => t.id === urlTeamId);
-        console.log('🍕 TeamContext: Using team from URL:', teamToSet.name);
-      } else if (savedTeamId && teams.find(t => t.id === savedTeamId)) {
-        teamToSet = teams.find(t => t.id === savedTeamId);
-        console.log('🍕 TeamContext: Using saved team:', teamToSet.name);
+      if (urlTeamId && teams.find((t) => t.id === urlTeamId)) {
+        teamToSet = teams.find((t) => t.id === urlTeamId);
+        console.log("🍕 TeamContext: Using team from URL:", teamToSet.name);
+      } else if (savedTeamId && teams.find((t) => t.id === savedTeamId)) {
+        teamToSet = teams.find((t) => t.id === savedTeamId);
+        console.log("🍕 TeamContext: Using saved team:", teamToSet.name);
       } else {
         teamToSet = teams[0];
-        console.log('🍕 TeamContext: Using first team:', teamToSet.name);
+        console.log("🍕 TeamContext: Using first team:", teamToSet.name);
       }
-      
+
       setCurrentTeam(ensureTeamInstance(teamToSet));
       // Mark that initial load is complete after setting team
       setTimeout(() => setIsInitialLoad(false), 100);
@@ -151,8 +185,8 @@ export function TeamProvider({ children }) {
   // Save current team to localStorage
   useEffect(() => {
     if (currentTeam) {
-      localStorage.setItem('currentTeamId', currentTeam.id);
-      localStorage.setItem('lastSelectedTeam', currentTeam.id);
+      localStorage.setItem("currentTeamId", currentTeam.id);
+      localStorage.setItem("lastSelectedTeam", currentTeam.id);
     }
   }, [currentTeam]);
 
@@ -162,22 +196,24 @@ export function TeamProvider({ children }) {
       const newTeam = await TeamService.createTeam({
         ...teamData,
         createdBy: user.uid,
-        coaches: [{
-          uid: user.uid,
-          email: user.email,
-          name: user.displayName || user.email,
-          role: 'head',
-          joinedAt: new Date()
-        }]
+        coaches: [
+          {
+            uid: user.uid,
+            email: user.email,
+            name: user.displayName || user.email,
+            role: "head",
+            joinedAt: new Date(),
+          },
+        ],
       });
-      
+
       const teamInstance = ensureTeamInstance(newTeam);
-      setTeams(prev => [teamInstance, ...ensureTeamInstances(prev)]);
+      setTeams((prev) => [teamInstance, ...ensureTeamInstances(prev)]);
       setCurrentTeam(teamInstance);
       return newTeam;
     } catch (error) {
-      console.error('Error creating team:', error);
-      setError('Failed to create team');
+      console.error("Error creating team:", error);
+      setError("Failed to create team");
       throw error;
     }
   };
@@ -186,31 +222,35 @@ export function TeamProvider({ children }) {
     try {
       setError(null);
       await TeamService.updateTeam(teamId, updateData);
-      
+
       // Update local state
-      setTeams(prev => ensureTeamInstances(prev.map(team => 
-        team.id === teamId ? { ...team, ...updateData } : team
-      )));
-      
+      setTeams((prev) =>
+        ensureTeamInstances(
+          prev.map((team) =>
+            team.id === teamId ? { ...team, ...updateData } : team
+          )
+        )
+      );
+
       if (currentTeam?.id === teamId) {
         setCurrentTeam(ensureTeamInstance({ ...currentTeam, ...updateData }));
       }
     } catch (error) {
-      console.error('Error updating team:', error);
-      setError('Failed to update team');
+      console.error("Error updating team:", error);
+      setError("Failed to update team");
       throw error;
     }
   };
 
   const switchTeam = (teamId) => {
-    console.log('🍕 TeamContext.switchTeam called', { 
-      teamId, 
+    console.log("🍕 TeamContext.switchTeam called", {
+      teamId,
       currentTeamId: currentTeam?.id,
-      stackTrace: new Error().stack 
+      stackTrace: new Error().stack,
     });
-    const team = teams.find(t => t.id === teamId);
+    const team = teams.find((t) => t.id === teamId);
     if (team) {
-      localStorage.setItem('lastSelectedTeam', teamId);
+      localStorage.setItem("lastSelectedTeam", teamId);
       setCurrentTeam(ensureTeamInstance(team));
       setIsInitialLoad(false); // This is a user action
     }
@@ -219,38 +259,47 @@ export function TeamProvider({ children }) {
   const joinTeamWithInvitation = async (invitationCode) => {
     try {
       setError(null);
-      console.log('🎫 TeamContext: Starting joinTeamWithInvitation for:', invitationCode);
-      
+      console.log(
+        "🎫 TeamContext: Starting joinTeamWithInvitation for:",
+        invitationCode
+      );
+
       const team = await TeamService.applyInvitation(invitationCode, {
         uid: user.uid,
         email: user.email,
-        name: user.displayName || user.email
+        name: user.displayName || user.email,
       });
-      
-      console.log('🎫 TeamContext: Invitation applied successfully, team:', team.name);
-      
+
+      console.log(
+        "🎫 TeamContext: Invitation applied successfully, team:",
+        team.name
+      );
+
       // Reload teams to include the new team
-      console.log('🎫 TeamContext: Reloading user teams after invitation...');
+      console.log("🎫 TeamContext: Reloading user teams after invitation...");
       await loadUserTeams();
-      
+
       // Verify the team is now in the list
       const reloadedTeams = await TeamService.getTeamsForCoach(user.uid);
-      console.log('🎫 TeamContext: Teams after reload:', {
+      console.log("🎫 TeamContext: Teams after reload:", {
         teamsCount: reloadedTeams.length,
-        teamNames: reloadedTeams.map(t => ({ id: t.id, name: t.name })),
+        teamNames: reloadedTeams.map((t) => ({ id: t.id, name: t.name })),
         targetTeamId: team.id,
-        isTargetTeamIncluded: reloadedTeams.some(t => t.id === team.id)
+        isTargetTeamIncluded: reloadedTeams.some((t) => t.id === team.id),
       });
-      
+
       // Ensure we have the team instance and set it as current
       const teamInstance = ensureTeamInstance(team);
       setCurrentTeam(teamInstance);
-      console.log('🎫 TeamContext: Set current team to:', teamInstance.name);
-      
+      console.log("🎫 TeamContext: Set current team to:", teamInstance.name);
+
       return team;
     } catch (error) {
-      console.error('❌ TeamContext: Error joining team with invitation:', error);
-      setError('Invalid or expired invitation code');
+      console.error(
+        "❌ TeamContext: Error joining team with invitation:",
+        error
+      );
+      setError("Invalid or expired invitation code");
       throw error;
     }
   };
@@ -265,8 +314,8 @@ export function TeamProvider({ children }) {
       );
       return invitation;
     } catch (error) {
-      console.error('Error creating invitation:', error);
-      setError('Failed to create invitation');
+      console.error("Error creating invitation:", error);
+      setError("Failed to create invitation");
       throw error;
     }
   };
@@ -275,20 +324,26 @@ export function TeamProvider({ children }) {
     try {
       setError(null);
       const newCode = await TeamService.regenerateInvitationCode(teamId);
-      
+
       // Update local state
-      setTeams(prev => ensureTeamInstances(prev.map(team => 
-        team.id === teamId ? { ...team, invitationCode: newCode } : team
-      )));
-      
+      setTeams((prev) =>
+        ensureTeamInstances(
+          prev.map((team) =>
+            team.id === teamId ? { ...team, invitationCode: newCode } : team
+          )
+        )
+      );
+
       if (currentTeam?.id === teamId) {
-        setCurrentTeam(ensureTeamInstance({ ...currentTeam, invitationCode: newCode }));
+        setCurrentTeam(
+          ensureTeamInstance({ ...currentTeam, invitationCode: newCode })
+        );
       }
-      
+
       return newCode;
     } catch (error) {
-      console.error('Error regenerating invitation code:', error);
-      setError('Failed to regenerate invitation code');
+      console.error("Error regenerating invitation code:", error);
+      setError("Failed to regenerate invitation code");
       throw error;
     }
   };
@@ -296,20 +351,20 @@ export function TeamProvider({ children }) {
   // Check if current user can manage a team (is head coach)
   const canManageTeam = (teamId = currentTeam?.id) => {
     if (!teamId || !user) return false;
-    const team = teams.find(t => t.id === teamId) || currentTeam;
+    const team = teams.find((t) => t.id === teamId) || currentTeam;
     return team?.isHeadCoach(user.uid);
   };
 
   // Check if current user is a coach on a team
   const isCoachOnTeam = (teamId = currentTeam?.id) => {
     if (!teamId || !user) return false;
-    const team = teams.find(t => t.id === teamId) || currentTeam;
+    const team = teams.find((t) => t.id === teamId) || currentTeam;
     return team?.isCoach(user.uid) || team?.isHeadCoach(user.uid);
   };
 
   // Force refresh - useful for debugging and after major operations
   const forceRefreshTeams = useCallback(async () => {
-    console.log('🔄 TeamContext: Force refreshing teams...');
+    console.log("🔄 TeamContext: Force refreshing teams...");
     setTeams([]);
     setCurrentTeam(null);
     await loadUserTeams();
@@ -322,7 +377,7 @@ export function TeamProvider({ children }) {
     loading,
     error,
     isInitialLoad,
-    
+
     // Actions
     createTeam,
     updateTeam,
@@ -332,15 +387,11 @@ export function TeamProvider({ children }) {
     regenerateInvitationCode,
     loadUserTeams,
     forceRefreshTeams,
-    
+
     // Utilities
     canManageTeam,
-    isCoachOnTeam
+    isCoachOnTeam,
   };
 
-  return (
-    <TeamContext.Provider value={value}>
-      {children}
-    </TeamContext.Provider>
-  );
+  return <TeamContext.Provider value={value}>{children}</TeamContext.Provider>;
 }

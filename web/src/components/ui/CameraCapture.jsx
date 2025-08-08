@@ -120,7 +120,7 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
       setError(errorMessage);
       setIsLoading(false);
     }
-  }, []);
+  }, [isLoading, videoReady]);
 
   const stopCamera = useCallback(() => {
     console.log('stopCamera called, streamRef.current:', streamRef.current);
@@ -224,7 +224,7 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
       // Stop camera when modal closes
       stopCamera();
     }
-  }, [isOpen]);
+  }, [isOpen, facingMode, startCamera, stopCamera]);
 
   // Cleanup on component unmount
   useEffect(() => {

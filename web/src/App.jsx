@@ -4,9 +4,6 @@ import {
   Routes,
   Route,
   Navigate,
-  useParams,
-  useNavigate,
-  useLocation,
 } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./firebase";
@@ -51,15 +48,14 @@ function AuthStateProvider({ children }) {
 
 // Debug redirect components
 function TeamsRedirect() {
-  console.log('🍕 Redirect triggered: /teams → /teams/setup');
+  console.log("🍕 Redirect triggered: /teams → /teams/setup");
   return <Navigate to="/teams/setup" replace />;
 }
 
 function RootRedirect() {
-  console.log('🍕 Redirect triggered: / → /teams/setup');
+  console.log("🍕 Redirect triggered: / → /teams/setup");
   return <Navigate to="/teams/setup" replace />;
 }
-
 
 function App() {
   return (
@@ -80,18 +76,26 @@ function App() {
             return (
               <Routes>
                 {/* Public routes - no authentication required */}
-                <Route path="/coaches/join/:invitationCode" element={<CoachInvitation />} />
-                
+                <Route
+                  path="/coaches/join/:invitationCode"
+                  element={<CoachInvitation />}
+                />
+
                 {/* Authenticated routes */}
-                <Route path="*" element={
-                  !user ? <AuthWrapper /> : (
-                    <AuthProvider user={user}>
-                      <TeamProvider>
-                        <AppContent user={user} />
-                      </TeamProvider>
-                    </AuthProvider>
-                  )
-                } />
+                <Route
+                  path="*"
+                  element={
+                    !user ? (
+                      <AuthWrapper />
+                    ) : (
+                      <AuthProvider user={user}>
+                        <TeamProvider>
+                          <AppContent user={user} />
+                        </TeamProvider>
+                      </AuthProvider>
+                    )
+                  }
+                />
               </Routes>
             );
           }}
@@ -122,7 +126,7 @@ function AppContent({ user }) {
         {/* Non-team routes */}
         <Route path="/teams/setup" element={<TeamSetup />} />
         <Route path="/teams/join/:invitationCode" element={<TeamSetup />} />
-        
+
         {/* Team layout with nested routes */}
         <Route
           path="/teams/:teamId"

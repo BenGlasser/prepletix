@@ -13,10 +13,6 @@ import { PracticePlan, DrillSlot, Drill } from "../../models/PracticePlan";
 import DatePicker from "../ui/DatePicker";
 import {
   XMarkIcon,
-  InformationCircleIcon,
-  FlagIcon,
-  PlusIcon,
-  TrashIcon,
   PlayIcon,
   DocumentTextIcon,
   ChevronDownIcon,
@@ -60,7 +56,6 @@ export default function PracticePlanForm({ plan, onClose }) {
   const [error, setError] = useState("");
   const [openSections, setOpenSections] = useState(new Set(["drills"])); // Start with drills open
   const [activeId, setActiveId] = useState(null);
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [drillFilters, setDrillFilters] = useState({
     name: "",
     category: [],
@@ -135,7 +130,6 @@ export default function PracticePlanForm({ plan, onClose }) {
     // Only auto-save if we're editing an existing plan and have required fields
     if (!plan || !plan.id || !formData.title.trim()) return;
 
-    setIsAutoSaving(true);
     try {
       const practicePlan = new PracticePlan({
         ...formData,
@@ -149,8 +143,6 @@ export default function PracticePlanForm({ plan, onClose }) {
       );
     } catch (error) {
       console.error("Auto-save error:", error);
-    } finally {
-      setIsAutoSaving(false);
     }
   };
 
