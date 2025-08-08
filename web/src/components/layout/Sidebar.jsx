@@ -178,8 +178,14 @@ export default function Sidebar({ isOpen, onClose, user, onSignOut }) {
               </button>
 
               {/* User Menu Dropdown */}
-              {userMenuOpen && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-xl py-1 z-50">
+              <div
+                className={`absolute bottom-full left-0 right-0 mb-2 z-50 transition-all duration-300 ease-out origin-bottom ${
+                  userMenuOpen
+                    ? "opacity-100 scale-y-100 scale-x-100 translate-y-0"
+                    : "opacity-0 scale-y-0 scale-x-100 translate-y-2 pointer-events-none"
+                }`}
+              >
+                <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-xl py-1">
                   <button
                     onClick={() => {
                       setUserMenuOpen(false);
@@ -202,7 +208,7 @@ export default function Sidebar({ isOpen, onClose, user, onSignOut }) {
                     <span>Sign Out</span>
                   </button>
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="mt-3 text-xs text-gray-500 dark:text-gray-400 text-center">

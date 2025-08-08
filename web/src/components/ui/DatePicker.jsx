@@ -62,9 +62,46 @@ export default function DatePicker({ value, onChange, label, className = '' }) {
   const updateDropdownPosition = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownWidth = 320;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Calculate ideal centered position under the button
+      let left = rect.left + rect.width / 2 - dropdownWidth / 2;
+      let top = rect.bottom + window.scrollY + 8;
+      
+      // Check horizontal boundaries
+      const rightEdge = left + dropdownWidth;
+      const leftEdge = left;
+      
+      if (rightEdge > viewportWidth) {
+        // If extends beyond right edge, align to right edge with padding
+        left = viewportWidth - dropdownWidth - 16;
+      } else if (leftEdge < 0) {
+        // If extends beyond left edge, align to left edge with padding
+        left = 16;
+      }
+      
+      // Check if dropdown extends beyond bottom of viewport
+      const dropdownHeight = 400; // Approximate height of calendar
+      const bottomEdge = rect.bottom + dropdownHeight;
+      
+      if (bottomEdge > viewportHeight) {
+        // If button is in lower half of screen and dropdown would overflow,
+        // center the dropdown on the screen
+        const availableSpace = viewportHeight - rect.top;
+        const spaceBelow = viewportHeight - rect.bottom;
+        
+        if (spaceBelow < dropdownHeight && availableSpace < dropdownHeight) {
+          // Center on screen vertically and horizontally
+          top = window.scrollY + (viewportHeight - dropdownHeight) / 2;
+          left = (viewportWidth - dropdownWidth) / 2;
+        }
+      }
+      
       setDropdownPosition({
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.left + rect.width / 2 - 160 // Center the 320px wide dropdown
+        top: Math.max(top, window.scrollY + 16), // Ensure minimum top padding
+        left: Math.max(16, Math.min(left, viewportWidth - dropdownWidth - 16)) // Ensure padding on both sides
       });
     }
   };

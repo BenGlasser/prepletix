@@ -1,37 +1,43 @@
-import { useState, useEffect, useCallback } from 'react';
-import { updateProfile } from 'firebase/auth';
-import { auth, storage } from '../../firebase';
-import { ref, getDownloadURL } from 'firebase/storage';
-import { ArrowLeftIcon, UserIcon } from '@heroicons/react/24/outline';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useTheme } from '../../hooks/useTheme';
-import ProfileMigration from '../debug/ProfileMigration';
-import { CoachService } from '../../services/coachService';
+import { useState, useEffect, useCallback } from "react";
+import { updateProfile } from "firebase/auth";
+import { auth, storage } from "../../firebase";
+import { ref, getDownloadURL } from "firebase/storage";
+import { ArrowLeftIcon, UserIcon } from "@heroicons/react/24/outline";
+import { useNavigate, useParams } from "react-router-dom";
+import { useTheme } from "../../hooks/useTheme";
+import ProfileMigration from "../debug/ProfileMigration";
+import { CoachService } from "../../services/coachService";
 
 // Profile Avatar Component with Firebase Storage priority and fallback
 function ProfileAvatar({ user, size = "h-20 w-20" }) {
   const [photoURL, setPhotoURL] = useState(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
-  
+
   useEffect(() => {
     const loadProfilePicture = async () => {
       if (!user?.uid) {
         setLoading(false);
         return;
       }
-      
+
       try {
         // First, try to get the profile picture from Firebase Storage
         const storageRef = ref(storage, `profile-pictures/${user.uid}.jpg`);
         const firebaseURL = await getDownloadURL(storageRef);
-        console.log('🍕 ProfileAvatar: Found Firebase Storage photo:', firebaseURL);
+        console.log(
+          "🍕 ProfileAvatar: Found Firebase Storage photo:",
+          firebaseURL
+        );
         setPhotoURL(firebaseURL);
       } catch (error) {
-        console.log('🍕 ProfileAvatar: No Firebase Storage photo, trying auth photoURL:', error.code);
+        console.log(
+          "🍕 ProfileAvatar: No Firebase Storage photo, trying auth photoURL:",
+          error.code
+        );
         // If not found in Firebase Storage, fall back to auth photoURL
         if (user.photoURL) {
-          console.log('🍕 ProfileAvatar: Using auth photoURL:', user.photoURL);
+          console.log("🍕 ProfileAvatar: Using auth photoURL:", user.photoURL);
           setPhotoURL(user.photoURL);
         }
       } finally {
@@ -43,11 +49,11 @@ function ProfileAvatar({ user, size = "h-20 w-20" }) {
   }, [user?.uid, user?.photoURL]);
 
   const getInitials = (name) => {
-    if (!name) return '?';
+    if (!name) return "?";
     return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
@@ -55,7 +61,9 @@ function ProfileAvatar({ user, size = "h-20 w-20" }) {
   // Show loading state
   if (loading) {
     return (
-      <div className={`${size} rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center`}>
+      <div
+        className={`${size} rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center`}
+      >
         <div className="animate-pulse">
           <UserIcon className="h-8 w-8 text-gray-300 dark:text-gray-600" />
         </div>
@@ -66,7 +74,9 @@ function ProfileAvatar({ user, size = "h-20 w-20" }) {
   // Show initials fallback if no photo or image error
   if (!photoURL || imageError) {
     return (
-      <div className={`${size} rounded-full bg-gradient-to-br from-primary-500 to-primary-600 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center`}>
+      <div
+        className={`${size} rounded-full bg-gradient-to-br from-primary-500 to-primary-600 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center`}
+      >
         {user?.displayName || user?.email ? (
           <span className="text-white font-semibold text-lg">
             {getInitials(user.displayName || user.email)}
@@ -82,10 +92,10 @@ function ProfileAvatar({ user, size = "h-20 w-20" }) {
   return (
     <img
       src={photoURL}
-      alt={user?.displayName || 'User'}
+      alt={user?.displayName || "User"}
       className={`${size} rounded-full object-cover border-2 border-gray-200 dark:border-gray-600`}
       onError={() => {
-        console.log('🍕 ProfileAvatar: Image failed to load:', photoURL);
+        console.log("🍕 ProfileAvatar: Image failed to load:", photoURL);
         setImageError(true);
       }}
     />
@@ -98,61 +108,66 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const [user] = useState(auth.currentUser);
   const [formData, setFormData] = useState({
-    displayName: '',
-    email: '',
+    displayName: "",
+    email: "",
   });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [saveTimeout, setSaveTimeout] = useState(null);
 
   useEffect(() => {
     if (user) {
       setFormData({
-        displayName: user.displayName || '',
-        email: user.email || '',
+        displayName: user.displayName || "",
+        email: user.email || "",
       });
     }
   }, [user]);
 
   const showMessage = useCallback((text, isError = false) => {
     setMessage({ text, isError });
-    setTimeout(() => setMessage(''), 3000);
+    setTimeout(() => setMessage(""), 3000);
   }, []);
 
-  const debouncedSave = useCallback((field, value) => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
-
-    const timeout = setTimeout(async () => {
-      if (!user) return;
-      
-      setLoading(true);
-      try {
-        if (field === 'displayName') {
-          // Use new CoachService to sync profile data
-          const result = await CoachService.syncCoachProfile(user, { 
-            displayName: value 
-          });
-          
-          console.log('🔄 Settings: Profile sync result:', result);
-          showMessage(`Display name updated successfully (synced ${result.updatedRecords} records)`);
-        }
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        showMessage('Failed to update profile', true);
-      } finally {
-        setLoading(false);
+  const debouncedSave = useCallback(
+    (field, value) => {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
       }
-    }, 500);
 
-    setSaveTimeout(timeout);
-  }, [user, saveTimeout, showMessage]);
+      const timeout = setTimeout(async () => {
+        if (!user) return;
+
+        setLoading(true);
+        try {
+          if (field === "displayName") {
+            // Use new CoachService to sync profile data
+            const result = await CoachService.syncCoachProfile(user, {
+              displayName: value,
+            });
+
+            console.log("🔄 Settings: Profile sync result:", result);
+            showMessage(
+              `Display name updated successfully (synced ${result.updatedRecords} records)`
+            );
+          }
+        } catch (error) {
+          console.error("Error updating profile:", error);
+          showMessage("Failed to update profile", true);
+        } finally {
+          setLoading(false);
+        }
+      }, 500);
+
+      setSaveTimeout(timeout);
+    },
+    [user, saveTimeout, showMessage]
+  );
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    if (field === 'displayName' && value !== user?.displayName) {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
+    if (field === "displayName" && value !== user?.displayName) {
       debouncedSave(field, value);
     }
   };
@@ -163,13 +178,13 @@ export default function Settings() {
       setSaveTimeout(null);
     }
 
-    if (field === 'displayName' && value !== user?.displayName) {
+    if (field === "displayName" && value !== user?.displayName) {
       debouncedSave(field, value);
     }
   };
 
   const handleKeyDown = (e, field, value) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.target.blur();
       handleInputBlur(field, value);
     }
@@ -201,11 +216,13 @@ export default function Settings() {
 
         {/* Status Message */}
         {message && (
-          <div className={`mb-6 p-4 rounded-lg border ${
-            message.isError 
-              ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-400'
-              : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-400'
-          }`}>
+          <div
+            className={`mb-6 p-4 rounded-lg border ${
+              message.isError
+                ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-400"
+                : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-400"
+            }`}
+          >
             {message.text}
           </div>
         )}
@@ -221,7 +238,7 @@ export default function Settings() {
                 Update your personal information and account details
               </p>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Profile Picture */}
               <div className="flex items-center space-x-4">
@@ -233,25 +250,32 @@ export default function Settings() {
                     Profile Picture
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {user?.providerData?.[0]?.providerId === 'google.com' 
-                      ? 'Managed by Google Account' 
-                      : 'Upload a new profile picture'}
+                    {user?.providerData?.[0]?.providerId === "google.com"
+                      ? "Managed by Google Account"
+                      : "Upload a new profile picture"}
                   </p>
                 </div>
               </div>
 
               {/* Display Name */}
               <div>
-                <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label
+                  htmlFor="displayName"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
                   Display Name
                 </label>
                 <input
                   type="text"
                   id="displayName"
                   value={formData.displayName}
-                  onChange={(e) => handleInputChange('displayName', e.target.value)}
-                  onBlur={(e) => handleInputBlur('displayName', e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(e, 'displayName', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("displayName", e.target.value)
+                  }
+                  onBlur={(e) => handleInputBlur("displayName", e.target.value)}
+                  onKeyDown={(e) =>
+                    handleKeyDown(e, "displayName", e.target.value)
+                  }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   placeholder="Enter your display name"
                 />
@@ -259,7 +283,10 @@ export default function Settings() {
 
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
                   Email Address
                 </label>
                 <input
@@ -286,7 +313,7 @@ export default function Settings() {
                 Customize how the app looks and feels
               </p>
             </div>
-            
+
             <div className="p-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -298,51 +325,59 @@ export default function Settings() {
                       type="radio"
                       name="theme"
                       value="light"
-                      checked={theme === 'light'}
+                      checked={theme === "light"}
                       onChange={(e) => setTheme(e.target.value)}
                       className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
                     />
-                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">Light</span>
+                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                      Light
+                    </span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="radio"
                       name="theme"
                       value="dark"
-                      checked={theme === 'dark'}
+                      checked={theme === "dark"}
                       onChange={(e) => setTheme(e.target.value)}
                       className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
                     />
-                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">Dark</span>
+                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                      Dark
+                    </span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="radio"
                       name="theme"
                       value="system"
-                      checked={theme === 'system'}
+                      checked={theme === "system"}
                       onChange={(e) => setTheme(e.target.value)}
                       className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600"
                     />
-                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">System</span>
+                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                      System
+                    </span>
                   </label>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  System will automatically switch between light and dark based on your device settings
+                  System will automatically switch between light and dark based
+                  on your device settings
                 </p>
               </div>
             </div>
           </div>
 
           {/* Profile Migration Section */}
-          {user?.email === 'brglasser@gmail.com' && (
+          {user?.email === "brglasser@gmail.com" && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-300 dark:border-yellow-700 shadow-sm">
               <div className="px-6 py-4 border-b border-yellow-200 dark:border-yellow-700">
                 <h2 className="text-xl font-semibold text-yellow-900 dark:text-yellow-100">
                   Profile Picture Migration
                 </h2>
                 <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                  Development tool to migrate Google profile picture to Firebase Storage
+                  Development tool to migrate Google profile picture to Firebase
+                  Storage
                 </p>
               </div>
               <div className="p-6">
@@ -350,43 +385,6 @@ export default function Settings() {
               </div>
             </div>
           )}
-
-          {/* Coach-Centric Migration Section - Development */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-300 dark:border-blue-700 shadow-sm">
-            <div className="px-6 py-4 border-b border-blue-200 dark:border-blue-700">
-              <h2 className="text-xl font-semibold text-blue-900 dark:text-blue-100">
-                Data Model Migration
-              </h2>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                Migrate to coach-centric data structure for better performance and consistency
-              </p>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                <p className="text-sm text-blue-600 dark:text-blue-400">
-                  The app now uses a coach-centric data model where coach profiles are primary entities. If you're experiencing data inconsistencies, run the migration:
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => window.open('/migrate-to-coach-centric.html', '_blank')}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-                  >
-                    🔄 Coach-Centric Migration
-                  </button>
-                  <button
-                    onClick={() => window.open('/migrate-fix-coach-data-sync.html', '_blank')}
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
-                  >
-                    🔧 Legacy Data Sync
-                  </button>
-                </div>
-                <p className="text-xs text-blue-500 dark:text-blue-400">
-                  <strong>Coach-Centric Migration</strong>: Restructures data for optimal performance (recommended)<br/>
-                  <strong>Legacy Data Sync</strong>: Quick fix for existing inconsistencies
-                </p>
-              </div>
-            </div>
-          </div>
 
           {/* Account Section */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm">
@@ -398,7 +396,7 @@ export default function Settings() {
                 Details about your account and authentication
               </p>
             </div>
-            
+
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -406,10 +404,11 @@ export default function Settings() {
                     Account Created
                   </label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {user?.metadata?.creationTime 
-                      ? new Date(user.metadata.creationTime).toLocaleDateString()
-                      : 'Unknown'
-                    }
+                    {user?.metadata?.creationTime
+                      ? new Date(
+                          user.metadata.creationTime
+                        ).toLocaleDateString()
+                      : "Unknown"}
                   </p>
                 </div>
                 <div>
@@ -417,10 +416,11 @@ export default function Settings() {
                     Last Sign In
                   </label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {user?.metadata?.lastSignInTime 
-                      ? new Date(user.metadata.lastSignInTime).toLocaleDateString()
-                      : 'Unknown'
-                    }
+                    {user?.metadata?.lastSignInTime
+                      ? new Date(
+                          user.metadata.lastSignInTime
+                        ).toLocaleDateString()
+                      : "Unknown"}
                   </p>
                 </div>
                 <div>
@@ -428,24 +428,25 @@ export default function Settings() {
                     Authentication Method
                   </label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {user?.providerData?.[0]?.providerId === 'google.com' 
-                      ? 'Google Account' 
-                      : user?.providerData?.[0]?.providerId === 'password' 
-                      ? 'Email & Password'
-                      : 'Unknown'
-                    }
+                    {user?.providerData?.[0]?.providerId === "google.com"
+                      ? "Google Account"
+                      : user?.providerData?.[0]?.providerId === "password"
+                      ? "Email & Password"
+                      : "Unknown"}
                   </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Email Verified
                   </label>
-                  <p className={`text-sm ${
-                    user?.emailVerified 
-                      ? 'text-green-600 dark:text-green-400' 
-                      : 'text-yellow-600 dark:text-yellow-400'
-                  }`}>
-                    {user?.emailVerified ? 'Verified' : 'Not Verified'}
+                  <p
+                    className={`text-sm ${
+                      user?.emailVerified
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-yellow-600 dark:text-yellow-400"
+                    }`}
+                  >
+                    {user?.emailVerified ? "Verified" : "Not Verified"}
                   </p>
                 </div>
               </div>
