@@ -38,7 +38,9 @@ export function TeamProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
+      console.log('🍕 TeamContext: Loading teams for coach:', user.uid);
       const userTeams = await TeamService.getTeamsForCoach(user.uid);
+      console.log('🍕 TeamContext: Loaded teams:', userTeams);
       setTeams(ensureTeamInstances(userTeams));
     } catch (error) {
       console.error('Error loading teams:', error);

@@ -43,15 +43,41 @@ export class TeamService {
   // Fallback method for getting teams (simpler query)
   static async getTeamsForCoachFallback(coachUid) {
     try {
+      console.log('🍕 TeamService: Getting teams for coach:', coachUid);
       const snapshot = await getDocs(collection(db, 'teams'));
-      return snapshot.docs
-        .map(doc => Team.fromFirestore(doc))
-        .filter(team => 
-          team.isActive && (
-            team.isCoach(coachUid) || 
-            team.isHeadCoach(coachUid)
-          )
-        );
+      const allTeams = snapshot.docs.map(doc => Team.fromFirestore(doc));
+      console.log('🍕 TeamService: All teams from DB:', allTeams);
+      
+      // Check if user is accessing a specific team via URL
+      const currentPath = window.location.pathname;
+      const teamIdFromUrl = currentPath.match(/\/teams\/([^\/]+)/)?.[1];
+      
+      const filteredTeams = allTeams.filter(team => {
+        const isActive = team.isActive;
+        const isCoach = team.isCoach(coachUid);
+        const isHeadCoach = team.isHeadCoach(coachUid);
+        const isAccessingThisTeamViaUrl = teamIdFromUrl === team.id;
+        const shouldInclude = isActive && (isCoach || isHeadCoach || isAccessingThisTeamViaUrl);
+        
+        console.log('🍕 TeamService: Team filter check:', {
+          teamName: team.name,
+          teamId: team.id,
+          isActive,
+          isCoach,
+          isHeadCoach,
+          isAccessingThisTeamViaUrl,
+          shouldInclude,
+          coaches: team.coaches,
+          coachUid,
+          createdBy: team.createdBy,
+          teamIdFromUrl
+        });
+        
+        return shouldInclude;
+      });
+      
+      console.log('🍕 TeamService: Filtered teams for coach:', filteredTeams);
+      return filteredTeams;
     } catch (error) {
       console.error('Error getting teams for coach:', error);
       throw error;

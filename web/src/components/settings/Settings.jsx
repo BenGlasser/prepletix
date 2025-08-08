@@ -1,10 +1,96 @@
 import { useState, useEffect, useCallback } from 'react';
 import { updateProfile } from 'firebase/auth';
-import { auth } from '../../firebase';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { auth, storage } from '../../firebase';
+import { ref, getDownloadURL } from 'firebase/storage';
+import { ArrowLeftIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import ProfileMigration from '../debug/ProfileMigration';
+import { CoachSyncService } from '../../services/coachSyncService';
+
+// Profile Avatar Component with Firebase Storage priority and fallback
+function ProfileAvatar({ user, size = "h-20 w-20" }) {
+  const [photoURL, setPhotoURL] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  
+  useEffect(() => {
+    const loadProfilePicture = async () => {
+      if (!user?.uid) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        // First, try to get the profile picture from Firebase Storage
+        const storageRef = ref(storage, `profile-pictures/${user.uid}.jpg`);
+        const firebaseURL = await getDownloadURL(storageRef);
+        console.log('🍕 ProfileAvatar: Found Firebase Storage photo:', firebaseURL);
+        setPhotoURL(firebaseURL);
+      } catch (error) {
+        console.log('🍕 ProfileAvatar: No Firebase Storage photo, trying auth photoURL:', error.code);
+        // If not found in Firebase Storage, fall back to auth photoURL
+        if (user.photoURL) {
+          console.log('🍕 ProfileAvatar: Using auth photoURL:', user.photoURL);
+          setPhotoURL(user.photoURL);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfilePicture();
+  }, [user?.uid, user?.photoURL]);
+
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className={`${size} rounded-full bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center`}>
+        <div className="animate-pulse">
+          <UserIcon className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+        </div>
+      </div>
+    );
+  }
+
+  // Show initials fallback if no photo or image error
+  if (!photoURL || imageError) {
+    return (
+      <div className={`${size} rounded-full bg-gradient-to-br from-primary-500 to-primary-600 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center`}>
+        {user?.displayName || user?.email ? (
+          <span className="text-white font-semibold text-lg">
+            {getInitials(user.displayName || user.email)}
+          </span>
+        ) : (
+          <UserIcon className="h-8 w-8 text-white" />
+        )}
+      </div>
+    );
+  }
+
+  // Show the actual photo
+  return (
+    <img
+      src={photoURL}
+      alt={user?.displayName || 'User'}
+      className={`${size} rounded-full object-cover border-2 border-gray-200 dark:border-gray-600`}
+      onError={() => {
+        console.log('🍕 ProfileAvatar: Image failed to load:', photoURL);
+        setImageError(true);
+      }}
+    />
+  );
+}
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -44,8 +130,13 @@ export default function Settings() {
       setLoading(true);
       try {
         if (field === 'displayName') {
-          await updateProfile(user, { displayName: value });
-          showMessage('Display name updated successfully');
+          // Use CoachSyncService to sync across all locations
+          const result = await CoachSyncService.syncCoachProfile(user, { 
+            displayName: value 
+          });
+          
+          console.log('🔄 Settings: Profile sync result:', result);
+          showMessage(`Display name updated successfully (synced ${result.updatedRecords} records)`);
         }
       } catch (error) {
         console.error('Error updating profile:', error);
@@ -135,11 +226,7 @@ export default function Settings() {
               {/* Profile Picture */}
               <div className="flex items-center space-x-4">
                 <div className="flex-shrink-0">
-                  <img
-                    src={user?.photoURL || '/default-avatar.png'}
-                    alt={user?.displayName || 'User'}
-                    className="h-20 w-20 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
-                  />
+                  <ProfileAvatar user={user} />
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -263,6 +350,34 @@ export default function Settings() {
               </div>
             </div>
           )}
+
+          {/* Coach Data Sync Section - Development */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-300 dark:border-blue-700 shadow-sm">
+            <div className="px-6 py-4 border-b border-blue-200 dark:border-blue-700">
+              <h2 className="text-xl font-semibold text-blue-900 dark:text-blue-100">
+                Coach Data Synchronization
+              </h2>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                Fix data inconsistencies between Settings, Coaches page, and team membership
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  If your display name appears differently in various parts of the app, use the migration tool to sync everything:
+                </p>
+                <button
+                  onClick={() => window.open('/migrate-fix-coach-data-sync.html', '_blank')}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                >
+                  🔧 Open Coach Data Migration Tool
+                </button>
+                <p className="text-xs text-blue-500 dark:text-blue-400">
+                  This will analyze and fix any inconsistencies between your Firebase Auth profile and team coach records.
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Account Section */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm">

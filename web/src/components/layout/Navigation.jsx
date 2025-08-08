@@ -33,10 +33,8 @@ export default function Navigation({ onToggleSidebar }) {
     }
   }, [loading, currentTeam, navigate, location.pathname]);
 
-  // Don't render navigation if no team
-  if (!loading && !currentTeam) {
-    return null;
-  }
+  // Show navigation even without a team to prevent UI issues for invited coaches
+  // The team selector will handle the no-team state appropriately
 
   return (
     <nav className="sticky top-0 z-40 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-300 dark:border-gray-700/50 shadow-sm">
