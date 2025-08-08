@@ -179,12 +179,22 @@ export class CoachService {
         const teamData = teamDoc.data();
         const coaches = teamData.coaches || [];
         
+        console.log('🔧 CoachService: Team before adding coach:', {
+          teamId,
+          currentCoaches: coaches,
+          createdBy: teamData.createdBy,
+          coachToAdd: coachUid
+        });
+        
         if (!coaches.includes(coachUid)) {
           coaches.push(coachUid);
           batch.update(teamRef, { 
             coaches, 
             updatedAt: new Date() 
           });
+          console.log('🔧 CoachService: Will update team with coaches:', coaches);
+        } else {
+          console.log('🔧 CoachService: Coach already in team, no update needed');
         }
       }
 

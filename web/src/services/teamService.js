@@ -297,7 +297,10 @@ export class TeamService {
       const updatedTeam = await this.getTeamById(invitation.teamId);
       console.log('✅ TeamService: Updated team coaches:', {
         teamId: updatedTeam.id,
-        coaches: updatedTeam.coaches
+        coaches: updatedTeam.coaches,
+        createdBy: updatedTeam.createdBy,
+        isNewCoachHeadCoach: updatedTeam.isHeadCoach(coachData.uid),
+        isNewCoachRegularCoach: updatedTeam.isCoach(coachData.uid)
       });
       
       console.log('✅ TeamService: Invitation applied successfully');
