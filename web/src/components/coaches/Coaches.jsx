@@ -22,6 +22,7 @@ import {
   ClipboardDocumentIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
+import QRCode from "qrcode";
 
 // Generate a consistent color for each user based on their email
 const getUserColor = (email) => {
@@ -79,6 +80,7 @@ export default function Coaches() {
   const [showAddCoach, setShowAddCoach] = useState(false);
   const [invitationLink, setInvitationLink] = useState("");
   const [linkCopied, setLinkCopied] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const messagesEndRef = useRef(null);
 
   // Load team data from URL param
@@ -219,6 +221,21 @@ export default function Coaches() {
       const link = `${baseUrl}/coaches/join/${invitation.invitationCode}`;
       setInvitationLink(link);
 
+      // Generate QR code for the invitation link
+      try {
+        const qrDataUrl = await QRCode.toDataURL(link, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
+        setQrCodeDataUrl(qrDataUrl);
+      } catch (error) {
+        console.error("Error generating QR code:", error);
+      }
+
       setNewCoachEmail("");
       setNewCoachName("");
       
@@ -243,6 +260,7 @@ export default function Coaches() {
   const closeInvitationModal = () => {
     setInvitationLink("");
     setLinkCopied(false);
+    setQrCodeDataUrl("");
     setShowAddCoach(false);
   };
 
@@ -406,9 +424,23 @@ export default function Coaches() {
                             )}
                           </button>
                         </div>
+                        {qrCodeDataUrl && (
+                          <div className="mt-4 text-center">
+                            <p className="text-sm text-green-700 dark:text-green-300 mb-2">
+                              Or scan this QR code:
+                            </p>
+                            <div className="flex justify-center">
+                              <img
+                                src={qrCodeDataUrl}
+                                alt="QR Code for invitation link"
+                                className="border-2 border-green-300 dark:border-green-600 rounded-lg"
+                              />
+                            </div>
+                          </div>
+                        )}
                         <button
                           onClick={closeInvitationModal}
-                          className="w-full px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
+                          className="w-full px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors mt-4"
                         >
                           Done
                         </button>
