@@ -55,7 +55,13 @@ export function TeamProvider({ children }) {
         teamsCount: userTeams.length,
         teams: userTeams.map(t => ({ id: t.id, name: t.name }))
       });
-      setTeams(ensureTeamInstances(userTeams));
+      
+      const teamInstances = ensureTeamInstances(userTeams);
+      console.log('🍕 TeamContext: Setting teams in state:', {
+        teamsCount: teamInstances.length,
+        teamNames: teamInstances.map(t => ({ id: t.id, name: t.name }))
+      });
+      setTeams(teamInstances);
       
       // If no teams loaded, try to handle the specific team from URL as fallback
       if (userTeams.length === 0) {
@@ -213,18 +219,37 @@ export function TeamProvider({ children }) {
   const joinTeamWithInvitation = async (invitationCode) => {
     try {
       setError(null);
+      console.log('🎫 TeamContext: Starting joinTeamWithInvitation for:', invitationCode);
+      
       const team = await TeamService.applyInvitation(invitationCode, {
         uid: user.uid,
         email: user.email,
         name: user.displayName || user.email
       });
       
+      console.log('🎫 TeamContext: Invitation applied successfully, team:', team.name);
+      
       // Reload teams to include the new team
+      console.log('🎫 TeamContext: Reloading user teams after invitation...');
       await loadUserTeams();
-      setCurrentTeam(ensureTeamInstance(team));
+      
+      // Verify the team is now in the list
+      const reloadedTeams = await TeamService.getTeamsForCoach(user.uid);
+      console.log('🎫 TeamContext: Teams after reload:', {
+        teamsCount: reloadedTeams.length,
+        teamNames: reloadedTeams.map(t => ({ id: t.id, name: t.name })),
+        targetTeamId: team.id,
+        isTargetTeamIncluded: reloadedTeams.some(t => t.id === team.id)
+      });
+      
+      // Ensure we have the team instance and set it as current
+      const teamInstance = ensureTeamInstance(team);
+      setCurrentTeam(teamInstance);
+      console.log('🎫 TeamContext: Set current team to:', teamInstance.name);
+      
       return team;
     } catch (error) {
-      console.error('Error joining team with invitation:', error);
+      console.error('❌ TeamContext: Error joining team with invitation:', error);
       setError('Invalid or expired invitation code');
       throw error;
     }
@@ -282,6 +307,14 @@ export function TeamProvider({ children }) {
     return team?.isCoach(user.uid) || team?.isHeadCoach(user.uid);
   };
 
+  // Force refresh - useful for debugging and after major operations
+  const forceRefreshTeams = useCallback(async () => {
+    console.log('🔄 TeamContext: Force refreshing teams...');
+    setTeams([]);
+    setCurrentTeam(null);
+    await loadUserTeams();
+  }, [loadUserTeams]);
+
   const value = {
     // State
     teams,
@@ -298,6 +331,7 @@ export function TeamProvider({ children }) {
     createInvitation,
     regenerateInvitationCode,
     loadUserTeams,
+    forceRefreshTeams,
     
     // Utilities
     canManageTeam,

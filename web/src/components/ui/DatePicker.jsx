@@ -16,7 +16,14 @@ export default function DatePicker({ value, onChange, label, className = '' }) {
       const date = new Date(value + 'T00:00:00');
       setViewMonth(date.getMonth());
       setViewYear(date.getFullYear());
-      setDisplayDate(date.toLocaleDateString('en-US', { 
+      
+      // Create responsive date format
+      const isSmallScreen = window.innerWidth < 640; // sm breakpoint
+      setDisplayDate(date.toLocaleDateString('en-US', isSmallScreen ? { 
+        month: 'short', 
+        day: 'numeric',
+        year: '2-digit'
+      } : { 
         weekday: 'short', 
         year: 'numeric', 
         month: 'short', 
@@ -63,45 +70,71 @@ export default function DatePicker({ value, onChange, label, className = '' }) {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const dropdownWidth = 320;
+      const dropdownHeight = 380; // More accurate calendar height
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
+      const padding = 16;
       
-      // Calculate ideal centered position under the button
-      let left = rect.left + rect.width / 2 - dropdownWidth / 2;
-      let top = rect.bottom + window.scrollY + 8;
+      // Calculate available space in all directions
+      const spaceLeft = rect.left;
+      const spaceRight = viewportWidth - rect.right;
+      const spaceAbove = rect.top;
+      const spaceBelow = viewportHeight - rect.bottom;
       
-      // Check horizontal boundaries
-      const rightEdge = left + dropdownWidth;
-      const leftEdge = left;
+      let left, top;
+      let shouldCenterOnScreen = false;
       
-      if (rightEdge > viewportWidth) {
-        // If extends beyond right edge, align to right edge with padding
-        left = viewportWidth - dropdownWidth - 16;
-      } else if (leftEdge < 0) {
-        // If extends beyond left edge, align to left edge with padding
-        left = 16;
-      }
-      
-      // Check if dropdown extends beyond bottom of viewport
-      const dropdownHeight = 400; // Approximate height of calendar
-      const bottomEdge = rect.bottom + dropdownHeight;
-      
-      if (bottomEdge > viewportHeight) {
-        // If button is in lower half of screen and dropdown would overflow,
-        // center the dropdown on the screen
-        const availableSpace = viewportHeight - rect.top;
-        const spaceBelow = viewportHeight - rect.bottom;
+      // Determine horizontal positioning
+      if (dropdownWidth <= viewportWidth - (2 * padding)) {
+        // Normal case: dropdown fits in viewport with padding
         
-        if (spaceBelow < dropdownHeight && availableSpace < dropdownHeight) {
-          // Center on screen vertically and horizontally
-          top = window.scrollY + (viewportHeight - dropdownHeight) / 2;
+        // Try centering under button first
+        const centeredLeft = rect.left + rect.width / 2 - dropdownWidth / 2;
+        
+        if (centeredLeft >= padding && centeredLeft + dropdownWidth <= viewportWidth - padding) {
+          // Perfect center positioning works
+          left = centeredLeft;
+        } else if (spaceRight >= dropdownWidth - rect.width / 2) {
+          // Align dropdown left edge with button left edge
+          left = rect.left;
+        } else if (spaceLeft >= dropdownWidth - rect.width / 2) {
+          // Align dropdown right edge with button right edge
+          left = rect.right - dropdownWidth;
+        } else {
+          // Not enough space on either side, center on screen
           left = (viewportWidth - dropdownWidth) / 2;
+          shouldCenterOnScreen = true;
         }
+      } else {
+        // Small screen: center dropdown on screen
+        left = Math.max(padding, (viewportWidth - dropdownWidth) / 2);
+        shouldCenterOnScreen = true;
       }
+      
+      // Determine vertical positioning
+      if (shouldCenterOnScreen || (spaceBelow < dropdownHeight && spaceAbove < dropdownHeight)) {
+        // Center on screen both horizontally and vertically
+        top = window.scrollY + Math.max(padding, (viewportHeight - dropdownHeight) / 2);
+        left = (viewportWidth - dropdownWidth) / 2;
+      } else if (spaceBelow >= dropdownHeight + padding) {
+        // Position below button
+        top = rect.bottom + window.scrollY + 8;
+      } else if (spaceAbove >= dropdownHeight + padding) {
+        // Position above button
+        top = rect.top + window.scrollY - dropdownHeight - 8;
+      } else {
+        // Fallback to screen center
+        top = window.scrollY + Math.max(padding, (viewportHeight - dropdownHeight) / 2);
+        left = (viewportWidth - dropdownWidth) / 2;
+      }
+      
+      // Final safety bounds
+      const finalLeft = Math.max(padding, Math.min(left, viewportWidth - dropdownWidth - padding));
+      const finalTop = Math.max(window.scrollY + padding, Math.min(top, window.scrollY + viewportHeight - dropdownHeight - padding));
       
       setDropdownPosition({
-        top: Math.max(top, window.scrollY + 16), // Ensure minimum top padding
-        left: Math.max(16, Math.min(left, viewportWidth - dropdownWidth - 16)) // Ensure padding on both sides
+        top: finalTop,
+        left: finalLeft
       });
     }
   };
@@ -169,7 +202,7 @@ export default function DatePicker({ value, onChange, label, className = '' }) {
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
       days.push(
-        <div key={`empty-${i}`} className="w-12 h-12"></div>
+        <div key={`empty-${i}`} className="h-10 w-10 sm:h-12 sm:w-12"></div>
       );
     }
 
@@ -183,7 +216,7 @@ export default function DatePicker({ value, onChange, label, className = '' }) {
         <button
           key={day}
           onClick={() => handleDateSelect(date)}
-          className={`w-12 h-12 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-primary-100 dark:hover:bg-primary-900/30 ${
+          className={`h-10 w-10 sm:h-12 sm:w-12 rounded-lg text-sm font-medium transition-colors duration-200 hover:bg-primary-100 dark:hover:bg-primary-900/30 ${
             selected
               ? 'bg-primary-600 text-white hover:bg-primary-700'
               : today
@@ -218,16 +251,16 @@ export default function DatePicker({ value, onChange, label, className = '' }) {
         </div>
 
         {/* Day Names */}
-        <div className="grid grid-cols-7 gap-2 mb-3">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-3">
           {dayNames.map((dayName) => (
-            <div key={dayName} className="w-12 h-8 flex items-center justify-center text-xs font-medium text-gray-500 dark:text-gray-400">
+            <div key={dayName} className="h-8 flex items-center justify-center text-xs font-medium text-gray-500 dark:text-gray-400">
               {dayName}
             </div>
           ))}
         </div>
 
         {/* Calendar Days */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {days}
         </div>
       </div>
@@ -253,11 +286,11 @@ export default function DatePicker({ value, onChange, label, className = '' }) {
             : 'bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500'
         }`}
       >
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 min-w-0">
           {!className.includes('bg-transparent') && (
-            <CalendarDaysIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+            <CalendarDaysIcon className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
           )}
-          <span className={`font-medium ${
+          <span className={`font-medium truncate ${
             className.includes('bg-transparent')
               ? className.includes('text-gray-600') 
                 ? 'text-gray-600 dark:text-gray-400' 
@@ -295,7 +328,7 @@ export default function DatePicker({ value, onChange, label, className = '' }) {
             onClick={(e) => e.stopPropagation()}
             data-datepicker-dropdown
           >
-            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-gray-200/50 dark:border-slate-600/50 rounded-xl shadow-xl min-w-[320px] w-max">
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-gray-200/50 dark:border-slate-600/50 rounded-xl shadow-xl w-[320px] max-w-[calc(100vw-32px)]">
               {renderCalendar()}
             </div>
           </div>

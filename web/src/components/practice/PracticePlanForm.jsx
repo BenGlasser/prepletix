@@ -698,7 +698,7 @@ export default function PracticePlanForm({ plan, onClose }) {
           <div className="flex justify-between items-start">
             <div className="flex-1 mr-6">
               {/* Practice Title and Date */}
-              <div className="flex items-center space-x-4 mb-4">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-4 space-y-3 lg:space-y-0 mb-4">
                 <input
                   type="text"
                   required
@@ -708,7 +708,7 @@ export default function PracticePlanForm({ plan, onClose }) {
                   }
                   onKeyPress={(e) => handleKeyPress(e, "title", e.target.value)}
                   onBlur={(e) => handleBlur("title", e.target.value)}
-                  className="text-3xl font-bold bg-transparent border-none focus:outline-none text-gray-900 dark:text-white flex-1 placeholder-gray-400 dark:placeholder-gray-500"
+                  className="text-2xl lg:text-3xl font-bold bg-transparent border-none focus:outline-none text-gray-900 dark:text-white lg:flex-1 placeholder-gray-400 dark:placeholder-gray-500"
                   placeholder={
                     plan && plan.id
                       ? "Practice Plan Title"
@@ -716,7 +716,7 @@ export default function PracticePlanForm({ plan, onClose }) {
                   }
                 />
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 flex-shrink-0">
                   <CalendarDaysIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   <DatePicker
                     value={formData.date}
@@ -724,7 +724,7 @@ export default function PracticePlanForm({ plan, onClose }) {
                       handleInputChange("date", date);
                       autoSave();
                     }}
-                    className="bg-transparent border-none focus:outline-none text-gray-600 dark:text-gray-400 font-medium"
+                    className="bg-transparent border-none focus:outline-none text-gray-600 dark:text-gray-400 font-medium min-w-0"
                   />
                 </div>
               </div>

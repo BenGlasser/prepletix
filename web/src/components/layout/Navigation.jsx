@@ -48,7 +48,7 @@ export default function Navigation({ onToggleSidebar }) {
   return (
     <nav className="sticky top-0 z-40 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-300 dark:border-gray-700/50 shadow-sm">
       <div className="px-6">
-        <div className="flex justify-between items-center h-16">
+        <div className="relative flex justify-between items-center h-16">
           <div className="flex items-center">
             {/* Mobile menu button */}
             <button
@@ -58,24 +58,24 @@ export default function Navigation({ onToggleSidebar }) {
               <Bars3Icon className="w-6 h-6" />
             </button>
 
-            {/* Logo/Brand */}
-            <div className="flex-shrink-0">
-              {/* Logo for small screens */}
-              <img
-                src="/logo.png"
-                alt="Prepletix"
-                className="h-8 w-auto sm:hidden ml-6"
-              />
-              {/* Text for larger screens */}
-              <h1 className="hidden sm:block text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-400 bg-clip-text text-transparent">
-                Prepletix
-              </h1>
-            </div>
-
             {/* Team Selector */}
-            <div className="ml-12 sm:ml-8 md:ml-12 lg:ml-40">
+            <div className="sm:ml-6 md:ml-12 lg:ml-40">
               <TeamSelector />
             </div>
+          </div>
+
+          {/* Logo/Brand - Centered */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 flex items-end space-x-2">
+            {/* Logo for small screens */}
+            <img
+              src="/logo.png"
+              alt="Prepletix"
+              className="sm:hidden h-8 w-auto"
+            />
+            {/* Text for larger screens */}
+            <h1 className="hidden sm:block text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-400 bg-clip-text text-transparent">
+              Prepletix
+            </h1>
           </div>
 
           <div className="flex items-center space-x-4">

@@ -205,10 +205,10 @@ export default function PracticePlanner() {
     <div className="h-full">
       <div className="p-6 min-h-full">
         {/* Header */}
-        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
-          <div className="flex justify-between items-center">
+        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-4 sm:p-6 mb-6">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center space-y-4 lg:space-y-0">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                 Practice Planner
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
@@ -216,38 +216,41 @@ export default function PracticePlanner() {
               </p>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
               <div className="flex bg-gray-100/80 dark:bg-slate-700/80 backdrop-blur-sm rounded-xl p-1 shadow-sm">
                 <button
                   onClick={() => setView("list")}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-none ${
                     view === "list"
                       ? "bg-white dark:bg-slate-800 shadow text-gray-900 dark:text-white"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                   }`}
                 >
-                  <ListBulletIcon className="w-4 h-4" />
-                  <span>List View</span>
+                  <ListBulletIcon className="w-4 h-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">List View</span>
+                  <span className="sm:hidden">List</span>
                 </button>
                 <button
                   onClick={() => setView("calendar")}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-none ${
                     view === "calendar"
                       ? "bg-white dark:bg-slate-800 shadow text-gray-900 dark:text-white"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                   }`}
                 >
-                  <CalendarDaysIcon className="w-4 h-4" />
-                  <span>Calendar View</span>
+                  <CalendarDaysIcon className="w-4 h-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">Calendar View</span>
+                  <span className="sm:hidden">Calendar</span>
                 </button>
               </div>
 
               <button
                 onClick={handleAddPlan}
-                className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-3 rounded-xl hover:from-primary-700 hover:to-primary-800 flex items-center space-x-2 shadow-lg shadow-primary-600/25 transition-all duration-200 hover:scale-[1.02] font-medium"
+                className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 sm:px-6 py-3 rounded-xl hover:from-primary-700 hover:to-primary-800 flex items-center justify-center space-x-2 shadow-lg shadow-primary-600/25 transition-all duration-200 hover:scale-[1.02] font-medium"
               >
-                <PlusIcon className="w-5 h-5" />
-                <span>New Practice Plan</span>
+                <PlusIcon className="w-5 h-5 flex-shrink-0" />
+                <span className="hidden sm:inline">New Practice Plan</span>
+                <span className="sm:hidden">New Plan</span>
               </button>
             </div>
           </div>

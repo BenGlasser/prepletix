@@ -33,21 +33,7 @@ export default function TeamSelector() {
     setIsOpen(false);
   };
 
-  if (teams.length === 0) {
-    return (
-      <>
-        <button
-          onClick={() => setShowTeamForm(true)}
-          className="flex items-center space-x-2 px-3 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-        >
-          <PlusIcon className="w-4 h-4" />
-          <span>Create Team</span>
-        </button>
-
-        {showTeamForm && <TeamForm onClose={() => setShowTeamForm(false)} />}
-      </>
-    );
-  }
+  // Always show the dropdown selector format, even with no teams
 
   return (
     <>
@@ -86,31 +72,46 @@ export default function TeamSelector() {
           }`}
         >
           <div className="bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-300 dark:border-gray-700/50 rounded-xl shadow-xl py-2 max-h-60 overflow-y-auto">
-            {teams.map((team) => (
-              <button
-                key={team.id}
-                onClick={() => handleTeamSelect(team.id)}
-                className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
-              >
-                <div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {team.name}
+            {teams.length > 0 ? (
+              <>
+                {teams.map((team) => (
+                  <button
+                    key={team.id}
+                    onClick={() => handleTeamSelect(team.id)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
+                  >
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {team.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {team.getSeasonDisplay
+                          ? team.getSeasonDisplay()
+                          : `${team.season?.period || "Unknown"} ${
+                              team.season?.year || "Unknown"
+                            }`}
+                      </div>
+                    </div>
+                    {currentTeam?.id === team.id && (
+                      <CheckIcon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                    )}
+                  </button>
+                ))}
+                <hr className="my-2 border-gray-300 dark:border-gray-700/50" />
+              </>
+            ) : (
+              <>
+                <div className="px-4 py-3 text-center">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    No teams yet
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {team.getSeasonDisplay
-                      ? team.getSeasonDisplay()
-                      : `${team.season?.period || "Unknown"} ${
-                          team.season?.year || "Unknown"
-                        }`}
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    Create your first team to get started
                   </div>
                 </div>
-                {currentTeam?.id === team.id && (
-                  <CheckIcon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                )}
-              </button>
-            ))}
-
-            <hr className="my-2 border-gray-300 dark:border-gray-700/50" />
+                <hr className="my-2 border-gray-300 dark:border-gray-700/50" />
+              </>
+            )}
 
             <button
               onClick={handleCreateTeam}
