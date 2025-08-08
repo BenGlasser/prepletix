@@ -41,3 +41,4 @@ firestore.rules
 firebase-debug.log
 storage.rules
 .DS_Store
+.firebase/hosting.d2ViL2Rpc3Q.cache
