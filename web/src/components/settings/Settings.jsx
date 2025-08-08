@@ -6,7 +6,7 @@ import { ArrowLeftIcon, UserIcon } from '@heroicons/react/24/outline';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import ProfileMigration from '../debug/ProfileMigration';
-import { CoachSyncService } from '../../services/coachSyncService';
+import { CoachService } from '../../services/coachService';
 
 // Profile Avatar Component with Firebase Storage priority and fallback
 function ProfileAvatar({ user, size = "h-20 w-20" }) {
@@ -130,8 +130,8 @@ export default function Settings() {
       setLoading(true);
       try {
         if (field === 'displayName') {
-          // Use CoachSyncService to sync across all locations
-          const result = await CoachSyncService.syncCoachProfile(user, { 
+          // Use new CoachService to sync profile data
+          const result = await CoachService.syncCoachProfile(user, { 
             displayName: value 
           });
           
@@ -351,29 +351,38 @@ export default function Settings() {
             </div>
           )}
 
-          {/* Coach Data Sync Section - Development */}
+          {/* Coach-Centric Migration Section - Development */}
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-300 dark:border-blue-700 shadow-sm">
             <div className="px-6 py-4 border-b border-blue-200 dark:border-blue-700">
               <h2 className="text-xl font-semibold text-blue-900 dark:text-blue-100">
-                Coach Data Synchronization
+                Data Model Migration
               </h2>
               <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                Fix data inconsistencies between Settings, Coaches page, and team membership
+                Migrate to coach-centric data structure for better performance and consistency
               </p>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 <p className="text-sm text-blue-600 dark:text-blue-400">
-                  If your display name appears differently in various parts of the app, use the migration tool to sync everything:
+                  The app now uses a coach-centric data model where coach profiles are primary entities. If you're experiencing data inconsistencies, run the migration:
                 </p>
-                <button
-                  onClick={() => window.open('/migrate-fix-coach-data-sync.html', '_blank')}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
-                >
-                  🔧 Open Coach Data Migration Tool
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => window.open('/migrate-to-coach-centric.html', '_blank')}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                  >
+                    🔄 Coach-Centric Migration
+                  </button>
+                  <button
+                    onClick={() => window.open('/migrate-fix-coach-data-sync.html', '_blank')}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
+                  >
+                    🔧 Legacy Data Sync
+                  </button>
+                </div>
                 <p className="text-xs text-blue-500 dark:text-blue-400">
-                  This will analyze and fix any inconsistencies between your Firebase Auth profile and team coach records.
+                  <strong>Coach-Centric Migration</strong>: Restructures data for optimal performance (recommended)<br/>
+                  <strong>Legacy Data Sync</strong>: Quick fix for existing inconsistencies
                 </p>
               </div>
             </div>

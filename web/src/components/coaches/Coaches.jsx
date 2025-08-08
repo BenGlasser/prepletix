@@ -15,6 +15,7 @@ import {
 import { db, storage } from "../../firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTeam } from "../../contexts/TeamContext";
 import {
   PlusIcon,
   TrashIcon,
@@ -87,6 +88,7 @@ const uploadProfilePictureToStorage = async (photoURL, userId) => {
 export default function Coaches() {
   const { user } = useAuth();
   const { teamId } = useParams();
+  const { createInvitation } = useTeam();
   const [currentTeam, setCurrentTeam] = useState(null);
   const [coaches, setCoaches] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -217,32 +219,20 @@ export default function Coaches() {
 
     setCreatingInvite(true);
     try {
-      // Create a coach invitation
-      const invitationCode = generateInvitationCode();
-      const invitationsRef = collection(db, "coachInvitations");
-
-      await addDoc(invitationsRef, {
-        teamId: teamId,
-        teamName: currentTeam?.name || "Team",
-        invitationCode: invitationCode,
-        invitedEmail: newCoachEmail.toLowerCase().trim(),
-        invitedName: newCoachName.trim(),
-        invitedBy: user.uid,
-        invitedByName: user.displayName || user.email,
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        isUsed: false,
-        usedAt: null,
-        usedBy: null,
-      });
-
+      console.log("🎫 Creating invitation via TeamService...");
+      
+      // Use the proper TeamService createInvitation method
+      const invitation = await createInvitation(teamId);
+      
       // Generate the invitation link
       const baseUrl = window.location.origin;
-      const link = `${baseUrl}/coaches/join/${invitationCode}`;
+      const link = `${baseUrl}/coaches/join/${invitation.invitationCode}`;
       setInvitationLink(link);
 
       setNewCoachEmail("");
       setNewCoachName("");
+      
+      console.log("✅ Invitation created successfully:", invitation);
     } catch (error) {
       console.error("Error creating coach invitation:", error);
     } finally {

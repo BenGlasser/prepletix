@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { TeamService } from '../services/teamService';
+import { CoachService } from '../services/coachService';
 import { Team } from '../models/Team';
 
 const TeamContext = createContext();
@@ -39,11 +40,54 @@ export function TeamProvider({ children }) {
       setLoading(true);
       setError(null);
       console.log('🍕 TeamContext: Loading teams for coach:', user.uid);
+      
+      // Ensure coach profile exists before trying to load teams
+      try {
+        const coachProfile = await CoachService.ensureCoachProfile(user);
+        console.log('✅ TeamContext: Coach profile verified/created:', coachProfile);
+      } catch (profileError) {
+        console.warn('⚠️ TeamContext: Could not ensure coach profile:', profileError);
+        // Continue anyway - the fallback method should still work
+      }
+      
       const userTeams = await TeamService.getTeamsForCoach(user.uid);
-      console.log('🍕 TeamContext: Loaded teams:', userTeams);
+      console.log('🍕 TeamContext: Loaded teams result:', {
+        teamsCount: userTeams.length,
+        teams: userTeams.map(t => ({ id: t.id, name: t.name }))
+      });
       setTeams(ensureTeamInstances(userTeams));
+      
+      // If no teams loaded, try to handle the specific team from URL as fallback
+      if (userTeams.length === 0) {
+        console.warn('⚠️ TeamContext: No teams found for coach. This might indicate:');
+        console.warn('   1. The coach-centric migration needs to be run');
+        console.warn('   2. The coach was not properly added to any teams');
+        console.warn('   3. Team data is in old embedded format');
+        console.warn('   💡 Run migration tool in Settings > Data Model Migration');
+        
+        // Emergency fallback: if user is on a team route, try to load that specific team
+        const currentPath = window.location.pathname;
+        const teamRouteMatch = currentPath.match(/^\/teams\/([^\/]+)/);
+        if (teamRouteMatch) {
+          const urlTeamId = teamRouteMatch[1];
+          console.log('🚑 TeamContext: Emergency fallback - trying to load team from URL:', urlTeamId);
+          try {
+            const specificTeam = await TeamService.getTeamById(urlTeamId);
+            if (specificTeam && (specificTeam.isCoach(user.uid) || specificTeam.isHeadCoach(user.uid))) {
+              console.log('✅ TeamContext: Emergency fallback successful - loaded team:', specificTeam.name);
+              setTeams([specificTeam]);
+              setCurrentTeam(specificTeam);
+            } else {
+              console.warn('❌ TeamContext: User does not have access to team:', urlTeamId);
+            }
+          } catch (fallbackError) {
+            console.error('❌ TeamContext: Emergency fallback failed:', fallbackError);
+          }
+        }
+      }
     } catch (error) {
-      console.error('Error loading teams:', error);
+      console.error('❌ TeamContext: Error loading teams:', error);
+      console.error('   This might indicate the coach-centric migration needs to be run');
       setError('Failed to load teams');
     } finally {
       setLoading(false);
@@ -61,14 +105,38 @@ export function TeamProvider({ children }) {
     }
   }, [user, loadUserTeams]);
 
-  // Set current team from localStorage or first team
+  // Set current team from localStorage, URL, or first team
   useEffect(() => {
     if (teams.length > 0 && !currentTeam) {
+      // Try localStorage first
       const savedTeamId = localStorage.getItem('currentTeamId');
-      const team = savedTeamId 
-        ? teams.find(t => t.id === savedTeamId) || teams[0]
-        : teams[0];
-      setCurrentTeam(ensureTeamInstance(team));
+      
+      // Check if user is on a team route and extract team ID from URL
+      const currentPath = window.location.pathname;
+      const teamRouteMatch = currentPath.match(/^\/teams\/([^\/]+)/);
+      const urlTeamId = teamRouteMatch ? teamRouteMatch[1] : null;
+      
+      console.log('🍕 TeamContext: Setting current team from:', {
+        savedTeamId,
+        urlTeamId,
+        currentPath,
+        availableTeams: teams.map(t => ({ id: t.id, name: t.name }))
+      });
+      
+      // Priority: URL team ID (if valid) > saved team ID > first team
+      let teamToSet = null;
+      if (urlTeamId && teams.find(t => t.id === urlTeamId)) {
+        teamToSet = teams.find(t => t.id === urlTeamId);
+        console.log('🍕 TeamContext: Using team from URL:', teamToSet.name);
+      } else if (savedTeamId && teams.find(t => t.id === savedTeamId)) {
+        teamToSet = teams.find(t => t.id === savedTeamId);
+        console.log('🍕 TeamContext: Using saved team:', teamToSet.name);
+      } else {
+        teamToSet = teams[0];
+        console.log('🍕 TeamContext: Using first team:', teamToSet.name);
+      }
+      
+      setCurrentTeam(ensureTeamInstance(teamToSet));
       // Mark that initial load is complete after setting team
       setTimeout(() => setIsInitialLoad(false), 100);
     }

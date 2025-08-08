@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coach-Centric Data Migration</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .step {
+            background: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .success {
+            background: #d4edda;
+            border-left-color: #28a745;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border-left-color: #17a2b8;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #1e1e1e;
+            color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Coach-Centric Data Migration</h1>
+        
+        <div class="step warning">
+            <h3>⚠️ IMPORTANT - READ BEFORE PROCEEDING</h3>
+            <p>This migration will restructure your data from <strong>team-centric</strong> to <strong>coach-centric</strong> model:</p>
+            <ul>
+                <li><strong>Before</strong>: Coach data embedded in team documents (duplicated across teams)</li>
+                <li><strong>After</strong>: Coach profiles as primary entities, teams reference coaches</li>
+            </ul>
+            <p><strong>⚠️ This is a one-way migration that will modify your database structure!</strong></p>
+            <p><strong>Make sure you have a backup and are signed in as an admin!</strong></p>
+        </div>
+
+        <div class="step info">
+            <h3>📋 What this migration does:</h3>
+            <ol>
+                <li><strong>Analyze existing data</strong> - Count teams, coaches, and identify duplicates</li>
+                <li><strong>Create coach profiles</strong> - Extract coach data from teams and create <code>/coaches/{uid}</code> documents</li>
+                <li><strong>Update team documents</strong> - Replace embedded coach data with coach references</li>
+                <li><strong>Migrate subcollections</strong> - Handle any <code>/teams/{id}/coaches</code> subcollections</li>
+                <li><strong>Verify integrity</strong> - Ensure all relationships are maintained correctly</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🎯 Migration Steps:</h3>
+            <button id="analyzeData" disabled>1. Analyze Current Data</button>
+            <button id="runMigration" disabled>2. Run Migration</button>
+            <button id="verifyData" disabled>3. Verify Results</button>
+            <div id="status"></div>
+        </div>
+
+        <div id="statsContainer" style="display: none;">
+            <h3>📊 Data Analysis Results:</h3>
+            <div class="stats" id="stats">
+                <!-- Stats will be populated here -->
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>📊 Migration Log:</h3>
+            <div id="log" class="log">Waiting for authentication...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            doc, 
+            getDoc,
+            setDoc,
+            updateDoc,
+            writeBatch,
+            query,
+            where 
+        } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCsKFebvW1Xy7BV5XR37UCKEZID3LYzXsk",
+            authDomain: "prepletix.firebaseapp.com",
+            projectId: "prepletix",
+            storageBucket: "prepletix.firebasestorage.app",
+            messagingSenderId: "881317585520",
+            appId: "1:881317585520:web:9034e8de4bcc9805a30ab5",
+            measurementId: "G-X3VMVRRLVS",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // DOM elements
+        const analyzeButton = document.getElementById('analyzeData');
+        const migrateButton = document.getElementById('runMigration');
+        const verifyButton = document.getElementById('verifyData');
+        const statusDiv = document.getElementById('status');
+        const logDiv = document.getElementById('log');
+        const statsContainer = document.getElementById('statsContainer');
+        const statsDiv = document.getElementById('stats');
+
+        let currentUser = null;
+        let migrationData = null;
+
+        // Logging function
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Update stats display
+        function updateStats(stats) {
+            statsDiv.innerHTML = Object.entries(stats).map(([key, value]) => `
+                <div class="stat-card">
+                    <div class="stat-number">${value}</div>
+                    <div class="stat-label">${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</div>
+                </div>
+            `).join('');
+            statsContainer.style.display = 'block';
+        }
+
+        // Analyze current data structure
+        async function analyzeCurrentData() {
+            try {
+                statusDiv.innerHTML = '<div class="step info">🔍 Analyzing current data structure...</div>';
+                log('Starting data analysis...');
+
+                // Get all teams
+                const teamsSnapshot = await getDocs(collection(db, 'teams'));
+                const teams = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                log(`Found ${teams.length} teams`);
+
+                // Analyze coach data in teams
+                const coachMap = new Map(); // uid -> coach data with teams
+                let totalEmbeddedCoaches = 0;
+                let duplicateInstances = 0;
+
+                for (const team of teams) {
+                    log(`\nAnalyzing team: ${team.name}`);
+                    
+                    if (team.coaches && Array.isArray(team.coaches) && team.coaches.length > 0) {
+                        // Check if it's the new format (UIDs) or old format (objects)
+                        const firstCoach = team.coaches[0];
+                        const isOldFormat = typeof firstCoach === 'object' && firstCoach !== null && firstCoach.uid;
+                        const isNewFormat = typeof firstCoach === 'string';
+                        
+                        log(`  - First coach type: ${typeof firstCoach}, hasUid: ${firstCoach?.uid ? 'yes' : 'no'}`);
+                        
+                        if (isNewFormat) {
+                            // New format - coaches array contains UIDs
+                            log(`  - ✅ New format: Coaches array (${team.coaches.length} UIDs): ${team.coaches.join(', ')}`);
+                            for (const coachUid of team.coaches) {
+                                if (!coachMap.has(coachUid)) {
+                                    coachMap.set(coachUid, {
+                                        uid: coachUid,
+                                        teams: [],
+                                        profile: { name: 'Unknown', email: 'unknown' }
+                                    });
+                                }
+                                coachMap.get(coachUid).teams.push({
+                                    teamId: team.id,
+                                    teamName: team.name,
+                                    role: team.createdBy === coachUid ? 'head' : 'assistant'
+                                });
+                            }
+                        } else if (isOldFormat) {
+                            // Old format - embedded coach objects
+                            log(`  - ❌ Old format: Embedded coaches (${team.coaches.length})`);
+                            for (const coach of team.coaches) {
+                                totalEmbeddedCoaches++;
+                                
+                                log(`    - Coach object: ${JSON.stringify({
+                                    uid: coach.uid,
+                                    name: coach.name || coach.displayName,
+                                    email: coach.email,
+                                    role: coach.role
+                                })}`);
+                                
+                                if (!coachMap.has(coach.uid)) {
+                                    coachMap.set(coach.uid, {
+                                        uid: coach.uid,
+                                        teams: [],
+                                        profile: {
+                                            name: coach.name || coach.displayName || 'Unknown',
+                                            email: coach.email || 'unknown',
+                                            photoURL: coach.photoURL || null
+                                        }
+                                    });
+                                } else {
+                                    duplicateInstances++;
+                                }
+                                
+                                coachMap.get(coach.uid).teams.push({
+                                    teamId: team.id,
+                                    teamName: team.name,
+                                    role: coach.role || (team.createdBy === coach.uid ? 'head' : 'assistant')
+                                });
+                            }
+                        } else {
+                            log(`  - ❓ Unknown coaches format: ${typeof firstCoach}, value: ${JSON.stringify(firstCoach)}`);
+                        }
+                    } else {
+                        log(`  - No coaches array or empty array`);
+                    }
+
+                    // Check for coach subcollections
+                    try {
+                        const coachesSubcollection = await getDocs(collection(db, 'teams', team.id, 'coaches'));
+                        if (!coachesSubcollection.empty) {
+                            log(`  - Found ${coachesSubcollection.size} coaches in subcollection`);
+                        }
+                    } catch (error) {
+                        log(`  - No coaches subcollection found`);
+                    }
+                }
+
+                // Check existing coach profiles
+                const existingCoachesSnapshot = await getDocs(collection(db, 'coaches'));
+                const existingCoaches = existingCoachesSnapshot.size;
+                
+                log(`\nFound ${existingCoaches} existing coach profiles`);
+
+                const stats = {
+                    totalTeams: teams.length,
+                    uniqueCoaches: coachMap.size,
+                    embeddedCoachInstances: totalEmbeddedCoaches,
+                    duplicateInstances: duplicateInstances,
+                    existingCoachProfiles: existingCoaches,
+                    needsMigration: totalEmbeddedCoaches > 0 ? 'Yes' : 'No'
+                };
+
+                migrationData = {
+                    teams,
+                    coachMap,
+                    stats
+                };
+
+                updateStats(stats);
+
+                log(`\n📊 Analysis Summary:`);
+                log(`- Total teams: ${stats.totalTeams}`);
+                log(`- Unique coaches: ${stats.uniqueCoaches}`);
+                log(`- Embedded coach instances: ${stats.embeddedCoachInstances}`);
+                log(`- Duplicate instances: ${stats.duplicateInstances}`);
+                log(`- Existing coach profiles: ${stats.existingCoachProfiles}`);
+
+                if (stats.embeddedCoachInstances > 0) {
+                    statusDiv.innerHTML = '<div class="step warning">⚠️ Migration needed! Found embedded coach data that should be converted to coach-centric structure.</div>';
+                    migrateButton.disabled = false;
+                } else {
+                    statusDiv.innerHTML = '<div class="step success">✅ Data is already in coach-centric format! No migration needed.</div>';
+                }
+
+                verifyButton.disabled = false;
+
+            } catch (error) {
+                log(`❌ Analysis failed: ${error.message}`);
+                console.error(error);
+                statusDiv.innerHTML = '<div class="step error">❌ Analysis failed. Check console for details.</div>';
+            }
+        }
+
+        // Run the migration
+        async function runMigration() {
+            if (!migrationData) {
+                log('❌ No migration data available. Run analysis first.');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to run the migration? This will modify your database structure and cannot be easily undone.')) {
+                return;
+            }
+
+            try {
+                statusDiv.innerHTML = '<div class="step info">🚀 Running migration... This may take a few minutes.</div>';
+                log('\n🚀 Starting migration...');
+
+                const { coachMap, teams } = migrationData;
+                const batch = writeBatch(db);
+                let batchCount = 0;
+                const maxBatchSize = 400; // Firestore limit is 500, we use 400 for safety
+
+                // Step 1: Create coach profiles
+                log('\n📝 Step 1: Creating coach profiles...');
+                for (const [uid, coachData] of coachMap) {
+                    const coachRef = doc(db, 'coaches', uid);
+                    
+                    // Check if coach profile already exists
+                    const existingCoach = await getDoc(coachRef);
+                    
+                    if (!existingCoach.exists()) {
+                        log(`Creating coach profile: ${coachData.profile.name} (${uid})`);
+                        
+                        const coachProfile = {
+                            profile: coachData.profile,
+                            teams: coachData.teams.map(team => ({
+                                teamId: team.teamId,
+                                role: team.role,
+                                joinedAt: new Date(),
+                                isActive: true
+                            })),
+                            preferences: {
+                                theme: 'system',
+                                notifications: true,
+                                emailUpdates: true
+                            },
+                            isActive: true,
+                            createdAt: new Date(),
+                            updatedAt: new Date()
+                        };
+                        
+                        batch.set(coachRef, coachProfile);
+                        batchCount++;
+                    } else {
+                        log(`Coach profile already exists: ${coachData.profile.name} (${uid})`);
+                    }
+
+                    // Commit batch if approaching limit
+                    if (batchCount >= maxBatchSize) {
+                        await batch.commit();
+                        log(`Committed batch of ${batchCount} operations`);
+                        batchCount = 0;
+                    }
+                }
+
+                // Step 2: Update team documents
+                log('\n📝 Step 2: Updating team documents...');
+                for (const team of teams) {
+                    if (team.coaches && team.coaches.length > 0 && typeof team.coaches[0] === 'object') {
+                        // Convert embedded coaches to UID references
+                        const coachUids = team.coaches.map(coach => coach.uid);
+                        
+                        log(`Updating team ${team.name}: ${team.coaches.length} coaches -> ${coachUids.length} UIDs`);
+                        
+                        const teamRef = doc(db, 'teams', team.id);
+                        batch.update(teamRef, {
+                            coaches: coachUids,
+                            updatedAt: new Date()
+                        });
+                        batchCount++;
+                    }
+
+                    // Commit batch if approaching limit
+                    if (batchCount >= maxBatchSize) {
+                        await batch.commit();
+                        log(`Committed batch of ${batchCount} operations`);
+                        batchCount = 0;
+                    }
+                }
+
+                // Final batch commit
+                if (batchCount > 0) {
+                    await batch.commit();
+                    log(`Committed final batch of ${batchCount} operations`);
+                }
+
+                log('\n✅ Migration completed successfully!');
+                statusDiv.innerHTML = '<div class="step success">🎉 Migration completed! Your data has been converted to coach-centric structure.</div>';
+                
+                // Enable verification
+                verifyButton.disabled = false;
+
+            } catch (error) {
+                log(`❌ Migration failed: ${error.message}`);
+                console.error(error);
+                statusDiv.innerHTML = '<div class="step error">❌ Migration failed. Check console for details.</div>';
+            }
+        }
+
+        // Verify migration results
+        async function verifyMigrationResults() {
+            try {
+                statusDiv.innerHTML = '<div class="step info">🔍 Verifying migration results...</div>';
+                log('\n🔍 Verifying migration results...');
+
+                // Check coach profiles
+                const coachesSnapshot = await getDocs(collection(db, 'coaches'));
+                const coaches = coachesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                log(`Found ${coaches.length} coach profiles after migration`);
+
+                // Check teams
+                const teamsSnapshot = await getDocs(collection(db, 'teams'));
+                const teams = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                log(`Found ${teams.length} teams after migration`);
+
+                let issues = 0;
+
+                // Verify team coach references
+                for (const team of teams) {
+                    log(`\nVerifying team: ${team.name}`);
+                    
+                    if (!team.coaches || !Array.isArray(team.coaches)) {
+                        log(`  ❌ No coaches array found`);
+                        issues++;
+                        continue;
+                    }
+
+                    const hasEmbeddedObjects = team.coaches.some(coach => typeof coach === 'object' && coach !== null);
+                    if (hasEmbeddedObjects) {
+                        log(`  ❌ Still has embedded coach objects: ${JSON.stringify(team.coaches[0])}`);
+                        issues++;
+                        continue;
+                    }
+
+                    log(`  ✅ Has ${team.coaches.length} coach references: ${team.coaches.join(', ')}`);
+
+                    // Verify coach profiles exist
+                    for (const coachUid of team.coaches) {
+                        const coach = coaches.find(c => c.id === coachUid);
+                        if (!coach) {
+                            log(`    ❌ Coach profile missing: ${coachUid}`);
+                            issues++;
+                        } else {
+                            const hasTeam = coach.teams && coach.teams.some(t => t.teamId === team.id);
+                            if (!hasTeam) {
+                                log(`    ❌ Coach ${coach.profile?.name || coachUid} doesn't have team in their profile`);
+                                issues++;
+                            } else {
+                                log(`    ✅ Coach ${coach.profile?.name || coachUid} profile is correct`);
+                            }
+                        }
+                    }
+                }
+
+                const verificationStats = {
+                    coachProfiles: coaches.length,
+                    teams: teams.length,
+                    issues: issues,
+                    status: issues === 0 ? 'Perfect' : 'Has Issues'
+                };
+
+                updateStats(verificationStats);
+
+                if (issues === 0) {
+                    log(`\n✅ Verification passed! No issues found.`);
+                    statusDiv.innerHTML = '<div class="step success">✅ Verification passed! Migration was successful and data integrity is maintained.</div>';
+                } else {
+                    log(`\n⚠️ Verification found ${issues} issues that may need attention.`);
+                    statusDiv.innerHTML = `<div class="step warning">⚠️ Verification found ${issues} issues that may need manual attention. Check the log for details.</div>`;
+                }
+
+            } catch (error) {
+                log(`❌ Verification failed: ${error.message}`);
+                console.error(error);
+                statusDiv.innerHTML = '<div class="step error">❌ Verification failed. Check console for details.</div>';
+            }
+        }
+
+        // Event listeners
+        analyzeButton.addEventListener('click', analyzeCurrentData);
+        migrateButton.addEventListener('click', runMigration);
+        verifyButton.addEventListener('click', verifyMigrationResults);
+
+        // Auth state listener
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                log(`✅ Authenticated as: ${user.email}`);
+                log('Ready to analyze current data structure.\n');
+                
+                statusDiv.innerHTML = `<div class="step success">✅ Authenticated as: ${user.email}</div>`;
+                analyzeButton.disabled = false;
+            } else {
+                currentUser = null;
+                log('❌ Not authenticated. Please sign in to your Prepletix app first.');
+                statusDiv.innerHTML = '<div class="step warning">⚠️ Not authenticated. Please sign in to your Prepletix app first.</div>';
+                analyzeButton.disabled = true;
+                migrateButton.disabled = true;
+                verifyButton.disabled = true;
+            }
+        });
+
+        log('🔄 Coach-Centric Migration Script Loaded');
+        log('This will convert your data from team-centric to coach-centric structure.');
+        log('Make sure you have a backup before proceeding!\n');
+    </script>
+</body>
+</html>

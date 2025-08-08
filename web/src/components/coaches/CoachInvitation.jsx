@@ -7,7 +7,6 @@ import {
   getDocs,
   doc,
   updateDoc,
-  addDoc,
 } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
@@ -21,6 +20,8 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+import { TeamService } from "../../services/teamService";
+import { CoachService } from "../../services/coachService";
 
 // Function to download profile picture and upload to Firebase Storage
 const uploadProfilePictureToStorage = async (photoURL, userId) => {
@@ -73,45 +74,45 @@ export default function CoachInvitation() {
 
         console.log("Loading invitation with code:", invitationCode);
 
-        // Query for the invitation
-        const q = query(
-          collection(db, "coachInvitations"),
-          where("invitationCode", "==", invitationCode),
-          where("isUsed", "==", false)
-        );
+        // Use TeamService to get invitation by code
+        const invitationData = await TeamService.getInvitationByCode(invitationCode);
+        console.log("TeamService invitation result:", invitationData);
 
-        const snapshot = await getDocs(q);
-        console.log("Query result:", snapshot.size, "documents found");
-
-        if (snapshot.empty) {
-          // Also try without the isUsed filter in case there's an issue
-          const q2 = query(
+        if (!invitationData) {
+          // Try legacy coachInvitations collection as fallback
+          console.log("Trying legacy coachInvitations collection...");
+          const q = query(
             collection(db, "coachInvitations"),
-            where("invitationCode", "==", invitationCode)
+            where("invitationCode", "==", invitationCode),
+            where("isUsed", "==", false)
           );
-          const snapshot2 = await getDocs(q2);
-          console.log("Query without isUsed filter:", snapshot2.size, "documents found");
+          const snapshot = await getDocs(q);
           
-          if (snapshot2.empty) {
-            setError("Invalid invitation code. The invitation may not exist.");
-          } else {
-            const doc = snapshot2.docs[0];
-            const data = doc.data();
-            console.log("Found invitation but it's already used:", data);
-            setError("This invitation has already been used.");
+          if (snapshot.empty) {
+            setError("Invalid invitation code. The invitation may not exist or has already been used.");
+            return;
           }
+          
+          const legacyInvitationDoc = snapshot.docs[0];
+          const legacyData = {
+            id: legacyInvitationDoc.id,
+            ...legacyInvitationDoc.data(),
+          };
+          
+          // Check if invitation is expired
+          const expiresAt = legacyData.expiresAt.toDate();
+          if (new Date() > expiresAt) {
+            setError("This invitation has expired");
+            return;
+          }
+          
+          setInvitation(legacyData);
+          setEmail(legacyData.invitedEmail);
           return;
         }
 
-        const invitationDoc = snapshot.docs[0];
-        const invitationData = {
-          id: invitationDoc.id,
-          ...invitationDoc.data(),
-        };
-
-        // Check if invitation is expired
-        const expiresAt = invitationData.expiresAt.toDate();
-        if (new Date() > expiresAt) {
+        // Check if invitation is valid
+        if (!invitationData.isValid()) {
           setError("This invitation has expired");
           return;
         }
@@ -231,30 +232,50 @@ export default function CoachInvitation() {
 
   const acceptInvitation = async (user) => {
     try {
+      console.log("🎫 Starting invitation acceptance process:", { 
+        userId: user.uid, 
+        invitationId: invitation.id, 
+        teamId: invitation.teamId 
+      });
+
       // Upload profile picture to Firebase Storage if available
       const uploadedPhotoURL = await uploadProfilePictureToStorage(user.photoURL, user.uid);
       
-      // Add coach to team
-      const coachesRef = collection(db, "teams", invitation.teamId, "coaches");
-      await addDoc(coachesRef, {
-        email: invitation.invitedEmail,
-        name: invitation.invitedName,
-        createdAt: new Date(),
-        addedBy: invitation.invitedBy,
-        addedByName: invitation.invitedByName,
-        joinedAt: new Date(),
-        userId: user.uid,
-        photoURL: uploadedPhotoURL, // Use uploaded Storage URL
-      });
+      // Prepare coach data for service methods
+      const coachData = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || invitation.invitedName,
+        photoURL: uploadedPhotoURL || user.photoURL
+      };
 
-      // Mark invitation as used
-      const invitationRef = doc(db, "coachInvitations", invitation.id);
-      await updateDoc(invitationRef, {
-        isUsed: true,
-        usedAt: new Date(),
-        usedBy: user.uid,
-      });
+      // Check if this is a legacy invitation or new invitation
+      if (invitation.id && invitation.invitationCode) {
+        // New approach: Use TeamService.applyInvitation
+        console.log("✅ Using new TeamService.applyInvitation method");
+        await TeamService.applyInvitation(invitation.invitationCode, coachData);
+      } else {
+        // Legacy approach: Manual coach profile creation and team addition
+        console.log("⚠️ Using legacy invitation acceptance method");
+        
+        // 1. Ensure coach profile exists
+        await CoachService.ensureCoachProfile(coachData);
+        
+        // 2. Add coach to team (this creates bidirectional relationship)
+        await CoachService.addCoachToTeam(user.uid, invitation.teamId, 'assistant');
+        
+        // 3. Mark legacy invitation as used if it has an ID
+        if (invitation.id) {
+          const invitationRef = doc(db, "coachInvitations", invitation.id);
+          await updateDoc(invitationRef, {
+            isUsed: true,
+            usedAt: new Date(),
+            usedBy: user.uid,
+          });
+        }
+      }
 
+      console.log("✅ Successfully accepted invitation and added coach to team");
       setSuccess(true);
 
       // Redirect to coaches page after 2 seconds
@@ -262,7 +283,7 @@ export default function CoachInvitation() {
         navigate(`/teams/${invitation.teamId}/coaches`);
       }, 2000);
     } catch (error) {
-      console.error("Error accepting invitation:", error);
+      console.error("❌ Error accepting invitation:", error);
       setError("Failed to join team. Please try again.");
     }
   };

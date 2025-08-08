@@ -6,22 +6,38 @@ import {
   addDoc, 
   updateDoc, 
   query, 
-  where
+  where,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Team, TeamInvitation } from '../models/Team';
+import { CoachService } from './coachService';
 
 export class TeamService {
   // Create a new team
   static async createTeam(teamData) {
     try {
+      const batch = writeBatch(db);
+      
       const team = new Team({
         ...teamData,
-        invitationCode: Team.generateInvitationCode()
+        invitationCode: Team.generateInvitationCode(),
+        coaches: [teamData.createdBy] // Add creator as first coach
       });
       
-      const docRef = await addDoc(collection(db, 'teams'), team.toFirestore());
-      team.id = docRef.id;
+      const teamRef = doc(collection(db, 'teams'));
+      team.id = teamRef.id;
+      
+      batch.set(teamRef, team.toFirestore());
+      
+      // Add team to coach's profile
+      if (teamData.createdBy) {
+        await CoachService.addCoachToTeam(teamData.createdBy, team.id, 'head');
+      }
+      
+      await batch.commit();
+      
+      console.log('✅ TeamService: Created team:', team.name);
       return team;
     } catch (error) {
       console.error('Error creating team:', error);
@@ -29,57 +45,76 @@ export class TeamService {
     }
   }
 
-  // Get teams for a specific coach
+  // Get teams for a specific coach (now uses coach-centric approach)
   static async getTeamsForCoach(coachUid) {
     try {
-      // Use fallback approach since complex queries can be problematic
-      return await this.getTeamsForCoachFallback(coachUid);
+      console.log('🍕 TeamService: Getting teams for coach:', coachUid);
+      
+      // Get team IDs from coach profile
+      const teamIds = await CoachService.getTeamsForCoach(coachUid);
+      console.log('🍕 TeamService: Coach is on teams:', teamIds);
+      
+      if (teamIds.length === 0) {
+        return [];
+      }
+      
+      // Get team documents
+      const teams = [];
+      for (const teamId of teamIds) {
+        try {
+          const team = await this.getTeamById(teamId);
+          if (team && team.isActive) {
+            teams.push(team);
+          }
+        } catch (error) {
+          console.warn(`Failed to load team ${teamId}:`, error);
+        }
+      }
+      
+      console.log('🍕 TeamService: Loaded teams for coach:', teams);
+      return teams;
     } catch (error) {
       console.error('Error getting teams for coach:', error);
-      throw error;
+      
+      // Fallback to old method during migration period
+      console.log('🔄 TeamService: Falling back to legacy method - coach profile may not exist yet');
+      console.log('💡 To fix this permanently, run the coach-centric migration in Settings');
+      return await this.getTeamsForCoachFallback(coachUid);
     }
   }
 
-  // Fallback method for getting teams (simpler query)
+  // Fallback method for getting teams (for migration compatibility)
   static async getTeamsForCoachFallback(coachUid) {
     try {
-      console.log('🍕 TeamService: Getting teams for coach:', coachUid);
+      console.log('🍕 TeamService: Using fallback method for coach:', coachUid);
       const snapshot = await getDocs(collection(db, 'teams'));
       const allTeams = snapshot.docs.map(doc => Team.fromFirestore(doc));
-      console.log('🍕 TeamService: All teams from DB:', allTeams);
-      
-      // Check if user is accessing a specific team via URL
-      const currentPath = window.location.pathname;
-      const teamIdFromUrl = currentPath.match(/\/teams\/([^\/]+)/)?.[1];
       
       const filteredTeams = allTeams.filter(team => {
         const isActive = team.isActive;
         const isCoach = team.isCoach(coachUid);
         const isHeadCoach = team.isHeadCoach(coachUid);
-        const isAccessingThisTeamViaUrl = teamIdFromUrl === team.id;
-        const shouldInclude = isActive && (isCoach || isHeadCoach || isAccessingThisTeamViaUrl);
+        const shouldInclude = isActive && (isCoach || isHeadCoach);
         
-        console.log('🍕 TeamService: Team filter check:', {
+        console.log('🍕 TeamService: Fallback filter check:', {
           teamName: team.name,
           teamId: team.id,
           isActive,
           isCoach,
           isHeadCoach,
-          isAccessingThisTeamViaUrl,
           shouldInclude,
           coaches: team.coaches,
           coachUid,
-          createdBy: team.createdBy,
-          teamIdFromUrl
+          createdBy: team.createdBy
         });
         
         return shouldInclude;
       });
       
-      console.log('🍕 TeamService: Filtered teams for coach:', filteredTeams);
+      console.log('🍕 TeamService: Fallback filtered teams:', filteredTeams);
       return filteredTeams;
     } catch (error) {
-      console.error('Error getting teams for coach:', error);
+      console.error('Error in fallback method:', error);
       throw error;
     }
   }
@@ -115,18 +150,19 @@ export class TeamService {
     }
   }
 
-  // Add a coach to a team
+  // Add a coach to a team (now delegates to CoachService)
   static async addCoachToTeam(teamId, coachData) {
     try {
+      console.log('🤝 TeamService: Adding coach to team via CoachService:', { teamId, coachData });
+      
+      // Ensure coach profile exists
+      await CoachService.ensureCoachProfile(coachData);
+      
+      // Use CoachService to maintain both sides of the relationship
+      const coach = await CoachService.addCoachToTeam(coachData.uid, teamId, coachData.role || 'assistant');
+      
       const team = await this.getTeamById(teamId);
-      team.addCoach(coachData);
-      
-      const teamRef = doc(db, 'teams', teamId);
-      await updateDoc(teamRef, {
-        coaches: team.coaches,
-        updatedAt: new Date()
-      });
-      
+      console.log('✅ TeamService: Coach added successfully');
       return team;
     } catch (error) {
       console.error('Error adding coach to team:', error);
@@ -134,18 +170,16 @@ export class TeamService {
     }
   }
 
-  // Remove a coach from a team
+  // Remove a coach from a team (now delegates to CoachService)
   static async removeCoachFromTeam(teamId, coachUid) {
     try {
+      console.log('❌ TeamService: Removing coach from team via CoachService:', { teamId, coachUid });
+      
+      // Use CoachService to maintain both sides of the relationship
+      await CoachService.removeCoachFromTeam(coachUid, teamId);
+      
       const team = await this.getTeamById(teamId);
-      team.removeCoach(coachUid);
-      
-      const teamRef = doc(db, 'teams', teamId);
-      await updateDoc(teamRef, {
-        coaches: team.coaches,
-        updatedAt: new Date()
-      });
-      
+      console.log('✅ TeamService: Coach removed successfully');
       return team;
     } catch (error) {
       console.error('Error removing coach from team:', error);
@@ -178,6 +212,8 @@ export class TeamService {
   // Get invitation by code
   static async getInvitationByCode(invitationCode) {
     try {
+      console.log('🔍 TeamService: Looking up invitation code:', invitationCode);
+      
       const q = query(
         collection(db, 'teamInvitations'),
         where('invitationCode', '==', invitationCode),
@@ -186,15 +222,33 @@ export class TeamService {
       
       const snapshot = await getDocs(q);
       
+      console.log('🔍 TeamService: Found', snapshot.size, 'unused invitations matching code');
+      
       if (snapshot.empty) {
+        console.log('❌ TeamService: No unused invitations found for code:', invitationCode);
         return null;
       }
       
       // Return the first valid invitation
       const invitation = TeamInvitation.fromFirestore(snapshot.docs[0]);
-      return invitation.isValid() ? invitation : null;
+      console.log('🔍 TeamService: Checking invitation validity:', {
+        id: invitation.id,
+        teamId: invitation.teamId,
+        isUsed: invitation.isUsed,
+        expiresAt: invitation.expiresAt,
+        isValid: invitation.isValid()
+      });
+      
+      const result = invitation.isValid() ? invitation : null;
+      if (!result) {
+        console.log('❌ TeamService: Invitation is expired or invalid');
+      } else {
+        console.log('✅ TeamService: Valid invitation found');
+      }
+      
+      return result;
     } catch (error) {
-      console.error('Error getting invitation by code:', error);
+      console.error('❌ TeamService: Error getting invitation by code:', error);
       throw error;
     }
   }
@@ -208,20 +262,48 @@ export class TeamService {
         throw new Error('Invalid or expired invitation');
       }
       
-      // Add coach to team
-      await this.addCoachToTeam(invitation.teamId, {
-        ...coachData,
-        role: 'assistant' // Default role for invited coaches
+      console.log('🎫 TeamService: Applying invitation:', { 
+        invitationCode, 
+        coachUid: coachData.uid,
+        teamId: invitation.teamId 
       });
       
-      // Mark invitation as used
+      // Step 1: Ensure coach profile exists first
+      console.log('🎫 TeamService: Step 1 - Ensuring coach profile exists');
+      const coachProfile = await CoachService.ensureCoachProfile(coachData);
+      console.log('✅ TeamService: Coach profile ensured:', {
+        uid: coachProfile.uid,
+        teamsCount: coachProfile.teams.length
+      });
+      
+      // Step 2: Add coach to team with assistant role (this updates both coach and team)
+      console.log('🎫 TeamService: Step 2 - Adding coach to team');
+      const updatedCoach = await CoachService.addCoachToTeam(coachData.uid, invitation.teamId, 'assistant');
+      console.log('✅ TeamService: Coach added to team, updated coach teams:', {
+        uid: updatedCoach.uid,
+        teamsCount: updatedCoach.teams.length,
+        teams: updatedCoach.teams // Now just array of team IDs
+      });
+      
+      // Step 3: Mark invitation as used
+      console.log('🎫 TeamService: Step 3 - Marking invitation as used');
       invitation.markAsUsed(coachData.uid);
       const invitationRef = doc(db, 'teamInvitations', invitation.id);
       await updateDoc(invitationRef, invitation.toFirestore());
+      console.log('✅ TeamService: Invitation marked as used');
       
-      return await this.getTeamById(invitation.teamId);
+      // Step 4: Verify the team was updated
+      console.log('🎫 TeamService: Step 4 - Verifying team update');
+      const updatedTeam = await this.getTeamById(invitation.teamId);
+      console.log('✅ TeamService: Updated team coaches:', {
+        teamId: updatedTeam.id,
+        coaches: updatedTeam.coaches
+      });
+      
+      console.log('✅ TeamService: Invitation applied successfully');
+      return updatedTeam;
     } catch (error) {
-      console.error('Error using invitation:', error);
+      console.error('❌ TeamService: Error applying invitation:', error);
       throw error;
     }
   }

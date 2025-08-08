@@ -1,4 +1,4 @@
-// Team model for Firestore
+// Team model for Firestore (coach-centric structure)
 export class Team {
   constructor(data = {}) {
     this.id = data.id || null;
@@ -7,12 +7,12 @@ export class Team {
       year: new Date().getFullYear(),
       period: 'fall' // fall, spring, summer, winter
     };
-    this.coaches = data.coaches || []; // array of coach objects with { uid, email, name, role }
+    this.coaches = data.coaches || []; // array of coach UIDs (references to /coaches/{uid})
     this.invitationCode = data.invitationCode || null; // unique code for inviting coaches
     this.isActive = data.isActive !== undefined ? data.isActive : true;
     this.createdAt = data.createdAt || new Date();
     this.updatedAt = data.updatedAt || new Date();
-    this.createdBy = data.createdBy || '';
+    this.createdBy = data.createdBy || ''; // coach UID who created the team
   }
 
   // Convert to Firestore-friendly object
@@ -56,7 +56,7 @@ export class Team {
 
   // Check if user is a coach on this team
   isCoach(userUid) {
-    return this.coaches.some(coach => coach.uid === userUid);
+    return this.coaches.includes(userUid);
   }
 
   // Check if user is the head coach (creator)
@@ -65,22 +65,28 @@ export class Team {
   }
 
   // Add a coach to the team
-  addCoach(coachData) {
+  addCoach(coachUid) {
     // Check if coach already exists
-    if (!this.coaches.some(coach => coach.uid === coachData.uid)) {
-      this.coaches.push({
-        uid: coachData.uid,
-        email: coachData.email,
-        name: coachData.name,
-        role: coachData.role || 'assistant', // head, assistant
-        joinedAt: new Date()
-      });
+    if (!this.coaches.includes(coachUid)) {
+      this.coaches.push(coachUid);
+      this.updatedAt = new Date();
     }
   }
 
   // Remove a coach from the team
   removeCoach(coachUid) {
-    this.coaches = this.coaches.filter(coach => coach.uid !== coachUid);
+    this.coaches = this.coaches.filter(uid => uid !== coachUid);
+    this.updatedAt = new Date();
+  }
+
+  // Get coach count
+  getCoachCount() {
+    return this.coaches.length;
+  }
+
+  // Check if team has any coaches
+  hasCoaches() {
+    return this.coaches.length > 0;
   }
 }
 
