@@ -171,7 +171,7 @@ export default function PracticePlanner() {
 
   if (teamLoading || loading) {
     return (
-      <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
+      <div className="h-full p-6">
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
@@ -186,7 +186,7 @@ export default function PracticePlanner() {
 
   if (!currentTeam) {
     return (
-      <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
+      <div className="h-full p-6">
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <div className="text-gray-500 dark:text-gray-400 mb-2">
@@ -202,7 +202,7 @@ export default function PracticePlanner() {
   }
 
   return (
-    <div className="h-full bg-gradient-to-br from-gray-50 via-white to-accent-50/30 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="h-full">
       <div className="p-6 min-h-full">
         {/* Header */}
         <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">

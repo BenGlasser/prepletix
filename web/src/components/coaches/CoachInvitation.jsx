@@ -12,12 +12,45 @@ import {
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
-import { auth, db } from "../../firebase";
+import { auth, db, storage } from "../../firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
+
+// Function to download profile picture and upload to Firebase Storage
+const uploadProfilePictureToStorage = async (photoURL, userId) => {
+  if (!photoURL) return null;
+  
+  try {
+    // Download the image from Google
+    const response = await fetch(photoURL);
+    if (!response.ok) {
+      console.warn("Failed to fetch profile picture:", response.statusText);
+      return null;
+    }
+    
+    const blob = await response.blob();
+    
+    // Create a reference to store the image in Firebase Storage
+    const imageRef = ref(storage, `profile-pictures/${userId}.jpg`);
+    
+    // Upload the image
+    await uploadBytes(imageRef, blob);
+    
+    // Get the download URL
+    const downloadURL = await getDownloadURL(imageRef);
+    
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading profile picture to storage:", error);
+    return null;
+  }
+};
 
 export default function CoachInvitation() {
   const { invitationCode } = useParams();
@@ -33,10 +66,12 @@ export default function CoachInvitation() {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    async () => {
+    const loadInvitation = async () => {
       try {
         setLoading(true);
         setError("");
+
+        console.log("Loading invitation with code:", invitationCode);
 
         // Query for the invitation
         const q = query(
@@ -46,9 +81,25 @@ export default function CoachInvitation() {
         );
 
         const snapshot = await getDocs(q);
+        console.log("Query result:", snapshot.size, "documents found");
 
         if (snapshot.empty) {
-          setError("Invalid or expired invitation code");
+          // Also try without the isUsed filter in case there's an issue
+          const q2 = query(
+            collection(db, "coachInvitations"),
+            where("invitationCode", "==", invitationCode)
+          );
+          const snapshot2 = await getDocs(q2);
+          console.log("Query without isUsed filter:", snapshot2.size, "documents found");
+          
+          if (snapshot2.empty) {
+            setError("Invalid invitation code. The invitation may not exist.");
+          } else {
+            const doc = snapshot2.docs[0];
+            const data = doc.data();
+            console.log("Found invitation but it's already used:", data);
+            setError("This invitation has already been used.");
+          }
           return;
         }
 
@@ -69,11 +120,22 @@ export default function CoachInvitation() {
         setEmail(invitationData.invitedEmail);
       } catch (error) {
         console.error("Error loading invitation:", error);
-        setError("Failed to load invitation");
+        console.error("Error code:", error.code);
+        console.error("Error message:", error.message);
+        
+        if (error.code === 'permission-denied') {
+          setError("Unable to access invitation data. This may be a permissions issue.");
+        } else if (error.code === 'unavailable') {
+          setError("Unable to connect to the database. Please check your internet connection and try again.");
+        } else {
+          setError("Failed to load invitation. Please try again later.");
+        }
       } finally {
         setLoading(false);
       }
     };
+
+    loadInvitation();
   }, [invitationCode]);
 
   const handleSignUp = async (e) => {
@@ -142,8 +204,36 @@ export default function CoachInvitation() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setProcessing(true);
+
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
+
+      // Add coach to team
+      await acceptInvitation(user);
+    } catch (error) {
+      console.error("Error during Google sign in:", error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setError("Sign-in cancelled");
+      } else if (error.code === 'auth/popup-blocked') {
+        setError("Pop-up blocked by browser. Please enable pop-ups and try again.");
+      } else {
+        setError("Failed to sign in with Google. Please try again.");
+      }
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const acceptInvitation = async (user) => {
     try {
+      // Upload profile picture to Firebase Storage if available
+      const uploadedPhotoURL = await uploadProfilePictureToStorage(user.photoURL, user.uid);
+      
       // Add coach to team
       const coachesRef = collection(db, "teams", invitation.teamId, "coaches");
       await addDoc(coachesRef, {
@@ -154,6 +244,7 @@ export default function CoachInvitation() {
         addedByName: invitation.invitedByName,
         joinedAt: new Date(),
         userId: user.uid,
+        photoURL: uploadedPhotoURL, // Use uploaded Storage URL
       });
 
       // Mark invitation as used
@@ -219,10 +310,14 @@ export default function CoachInvitation() {
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
             <button
-              onClick={() => navigate("/")}
+              onClick={() => {
+                console.log("Navigating to login page");
+                // Force a full page reload to the login page since there's no user
+                window.location.href = "/";
+              }}
               className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
             >
-              Go to Home
+              Go to Login
             </button>
           </div>
         </div>
@@ -345,6 +440,47 @@ export default function CoachInvitation() {
               : isExistingUser
               ? "Sign In & Join Team"
               : "Create Account & Join Team"}
+          </button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-100 dark:bg-slate-900 text-gray-500 dark:text-gray-400">
+                Or
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={processing}
+            className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <svg
+              className="h-5 w-5 mr-2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                fill="currentColor"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="currentColor"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="currentColor"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              />
+              <path
+                fill="currentColor"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              />
+            </svg>
+            {processing ? "Processing..." : "Continue with Google"}
           </button>
 
           {!isExistingUser && (

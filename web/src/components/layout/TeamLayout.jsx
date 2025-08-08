@@ -5,8 +5,8 @@ import Sidebar from "./Sidebar";
 
 export default function TeamLayout({ user, onSignOut }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  console.log('🍕 TeamLayout rendering');
+
+  console.log("🍕 TeamLayout rendering");
 
   const handleToggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -17,7 +17,7 @@ export default function TeamLayout({ user, onSignOut }) {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900 transition-colors duration-200 overflow-hidden">
+    <div className="h-screen flex flex-col bg-gray-100 dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-200 overflow-hidden">
       <Navigation onToggleSidebar={handleToggleSidebar} />
 
       <div className="flex-1 flex overflow-hidden">

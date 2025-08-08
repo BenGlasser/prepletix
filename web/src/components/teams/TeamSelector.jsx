@@ -54,7 +54,7 @@ export default function TeamSelector() {
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center space-x-3 px-3 py-2 bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-300 dark:border-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/95 transition-all duration-200 min-w-[200px] shadow-sm"
+          className="flex items-center space-x-3 px-3 py-2 bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-300 dark:border-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/95 transition-all duration-200 min-w-[140px] sm:min-w-[180px] md:min-w-[200px] shadow-sm"
         >
           <div className="flex-1 text-left">
             <div className="text-sm font-medium text-gray-900 dark:text-white">

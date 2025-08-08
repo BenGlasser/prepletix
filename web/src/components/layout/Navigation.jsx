@@ -53,13 +53,20 @@ export default function Navigation({ onToggleSidebar }) {
 
             {/* Logo/Brand */}
             <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-400 bg-clip-text text-transparent">
+              {/* Logo for small screens */}
+              <img 
+                src="/logo.png" 
+                alt="Prepletix" 
+                className="h-8 w-auto sm:hidden"
+              />
+              {/* Text for larger screens */}
+              <h1 className="hidden sm:block text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-400 bg-clip-text text-transparent">
                 Prepletix
               </h1>
             </div>
 
             {/* Team Selector */}
-            <div className="ml-40">
+            <div className="ml-4 sm:ml-8 md:ml-12 lg:ml-40">
               <TeamSelector />
             </div>
           </div>

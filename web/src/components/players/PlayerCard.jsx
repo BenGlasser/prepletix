@@ -93,11 +93,23 @@ export default function PlayerCard({ player, onClick, onDelete, attendanceStats,
               {/* Camera overlay */}
               <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity duration-200">
                 {uploadingPhoto ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <CameraIcon className="w-5 h-5 text-white" />
                 ) : (
                   <CameraIcon className="w-5 h-5 text-white" />
                 )}
               </div>
+              
+              {/* Scan line animation during upload */}
+              {uploadingPhoto && (
+                <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                  {/* Darker overlay */}
+                  <div className="absolute inset-0 bg-black/40"></div>
+                  {/* Scanning line */}
+                  <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-90 animate-scan-line"></div>
+                  {/* Subtle scanning overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 via-transparent to-blue-500/10"></div>
+                </div>
+              )}
             </div>
             {player.jerseyNumber && (
               <div className="absolute -top-2 -right-2 w-6 h-6 bg-accent-50 dark:bg-gray-700 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800 z-10">

@@ -77,32 +77,22 @@ function App() {
               );
             }
 
-            if (!user) {
-              // Check if this is a coach invitation route
-              if (window.location.pathname.startsWith("/coaches/join/")) {
-                return (
-                  <Suspense
-                    fallback={
-                      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
-                        <div className="text-gray-500 dark:text-gray-400">
-                          Loading...
-                        </div>
-                      </div>
-                    }
-                  >
-                    <CoachInvitation />
-                  </Suspense>
-                );
-              }
-              return <AuthWrapper />;
-            }
-
             return (
-              <AuthProvider user={user}>
-                <TeamProvider>
-                  <AppContent user={user} />
-                </TeamProvider>
-              </AuthProvider>
+              <Routes>
+                {/* Public routes - no authentication required */}
+                <Route path="/coaches/join/:invitationCode" element={<CoachInvitation />} />
+                
+                {/* Authenticated routes */}
+                <Route path="*" element={
+                  !user ? <AuthWrapper /> : (
+                    <AuthProvider user={user}>
+                      <TeamProvider>
+                        <AppContent user={user} />
+                      </TeamProvider>
+                    </AuthProvider>
+                  )
+                } />
+              </Routes>
             );
           }}
         </AuthStateProvider>

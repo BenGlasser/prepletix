@@ -4,6 +4,7 @@ import { auth } from '../../firebase';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
+import ProfileMigration from '../debug/ProfileMigration';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -245,6 +246,23 @@ export default function Settings() {
               </div>
             </div>
           </div>
+
+          {/* Profile Migration Section */}
+          {user?.email === 'brglasser@gmail.com' && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-300 dark:border-yellow-700 shadow-sm">
+              <div className="px-6 py-4 border-b border-yellow-200 dark:border-yellow-700">
+                <h2 className="text-xl font-semibold text-yellow-900 dark:text-yellow-100">
+                  Profile Picture Migration
+                </h2>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                  Development tool to migrate Google profile picture to Firebase Storage
+                </p>
+              </div>
+              <div className="p-6">
+                <ProfileMigration />
+              </div>
+            </div>
+          )}
 
           {/* Account Section */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm">

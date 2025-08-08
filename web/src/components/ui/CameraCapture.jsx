@@ -10,6 +10,7 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
   const [error, setError] = useState('');
   const [facingMode, setFacingMode] = useState('user'); // Start with front camera as it's more reliable
   const [videoReady, setVideoReady] = useState(false);
+  const facingModeRef = useRef('user');
 
   const startCamera = useCallback(async () => {
     console.log('=== Starting camera ===');
@@ -32,21 +33,21 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
 
       console.log('Requesting camera access...');
       
-      // Try basic constraints first
-      let constraints = { video: true, audio: false };
+      // Try with facingMode first (what we actually want)
+      let constraints = {
+        video: { facingMode: facingModeRef.current },
+        audio: false
+      };
       let newStream;
       
       try {
         newStream = await navigator.mediaDevices.getUserMedia(constraints);
-        console.log('✓ Camera stream obtained with basic constraints');
+        console.log('✓ Camera stream obtained with facingMode:', facingModeRef.current);
       } catch {
-        console.log('Basic constraints failed, trying with facingMode:', facingMode);
-        constraints = {
-          video: { facingMode },
-          audio: false
-        };
+        console.log('FacingMode constraints failed, trying basic constraints');
+        constraints = { video: true, audio: false };
         newStream = await navigator.mediaDevices.getUserMedia(constraints);
-        console.log('✓ Camera stream obtained with facingMode');
+        console.log('✓ Camera stream obtained with basic constraints');
       }
       
       streamRef.current = newStream;
@@ -77,14 +78,6 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
             }
           };
           
-          videoRef.current.oncanplay = () => {
-            console.log('✓ Video can play');
-            if (videoRef.current.videoWidth > 0 && videoRef.current.videoHeight > 0) {
-              setVideoReady(true);
-              setIsLoading(false);
-            }
-          };
-          
           // Try to play the video
           try {
             await videoRef.current.play();
@@ -101,14 +94,14 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
       
       await setupVideo();
       
-      // Fallback timeout
+      // Fallback timeout - reduced and more conservative
       setTimeout(() => {
-        if (isLoading && streamRef.current) {
+        if (isLoading && streamRef.current && !videoReady) {
           console.log('Timeout reached, assuming video is ready');
           setVideoReady(true);
           setIsLoading(false);
         }
-      }, 5000);
+      }, 3000);
 
     } catch (error) {
       console.error('❌ Camera error:', error);
@@ -127,7 +120,7 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
       setError(errorMessage);
       setIsLoading(false);
     }
-  }, [facingMode, isLoading]);
+  }, []);
 
   const stopCamera = useCallback(() => {
     console.log('stopCamera called, streamRef.current:', streamRef.current);
@@ -210,88 +203,36 @@ export default function CameraCapture({ isOpen, onClose, onCapture }) {
   }, [onCapture, handleClose]);
 
   const switchCamera = useCallback(() => {
-    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
-  }, []);
-
-  // Start camera when component opens or facing mode changes
-  useEffect(() => {
-    if (isOpen) {
-      console.log('Starting camera, facing mode:', facingMode);
+    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newFacingMode);
+    facingModeRef.current = newFacingMode;
+    
+    // Only restart camera if it's currently active
+    if (stream && !isLoading) {
+      console.log('Switching camera, restarting...');
       startCamera();
     }
+  }, [facingMode, stream, isLoading, startCamera]);
 
-    return () => {
-      // Cleanup function to ensure camera is always stopped
-      console.log('useEffect cleanup running, streamRef.current:', streamRef.current);
-      
-      // Stop any current stream from ref
-      if (streamRef.current) {
-        console.log('Cleanup: stopping camera stream from ref');
-        streamRef.current.getTracks().forEach(track => {
-          console.log('Cleanup stopping track:', track.kind, track.readyState);
-          track.stop();
-        });
-        streamRef.current = null;
-      }
-      
-      // Reset state
-      setVideoReady(false);
-      setStream(null);
-      setError('');
-      
-      // Copy ref to variable to avoid stale closure
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      const videoElement = videoRef.current;
-      if (videoElement && videoElement.srcObject) {
-        console.log('Cleanup: stopping stream from video element');
-        const videoStream = videoElement.srcObject;
-        if (videoStream && videoStream.getTracks) {
-          videoStream.getTracks().forEach(track => {
-            console.log('Cleanup stopping video track:', track.kind, track.readyState);
-            track.stop();
-          });
-        }
-        videoElement.srcObject = null;
-      }
-    };
-  }, [isOpen, facingMode, startCamera]);
-
-  // Additional cleanup on unmount - this is critical
+  // Start camera when component opens
   useEffect(() => {
-    return () => {
-      console.log('CameraCapture component unmounting - force cleanup');
-      
-      // Force stop any remaining streams
-      if (streamRef.current) {
-        console.log('Force cleanup: stopping stream from ref');
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
-      
-      // Copy ref to variable to avoid stale closure
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      const videoElement = videoRef.current;
-      if (videoElement && videoElement.srcObject) {
-        console.log('Force cleanup: stopping stream from video');
-        const videoStream = videoElement.srcObject;
-        if (videoStream && videoStream.getTracks) {
-          videoStream.getTracks().forEach(track => track.stop());
-        }
-        videoElement.srcObject = null;
-      }
-    };
-  }, []);
-
-  // Additional cleanup when component closes
-  useEffect(() => {
-    if (!isOpen) {
-      // Ensure video element is cleared when modal closes
-      if (videoRef.current) {
-        console.log('Modal closed, clearing video element');
-        videoRef.current.srcObject = null;
-      }
+    if (isOpen) {
+      facingModeRef.current = facingMode;
+      console.log('Starting camera, facing mode:', facingModeRef.current);
+      startCamera();
+    } else {
+      // Stop camera when modal closes
+      stopCamera();
     }
   }, [isOpen]);
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      console.log('CameraCapture component unmounting - cleanup');
+      stopCamera();
+    };
+  }, [stopCamera]);
 
   if (!isOpen) return null;
 

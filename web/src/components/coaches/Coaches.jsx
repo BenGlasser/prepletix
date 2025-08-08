@@ -12,7 +12,8 @@ import {
   getDocs,
   getDoc,
 } from "firebase/firestore";
-import { db } from "../../firebase";
+import { db, storage } from "../../firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   PlusIcon,
@@ -51,6 +52,36 @@ const generateInvitationCode = () => {
     Math.random().toString(36).substring(2, 15) +
     Math.random().toString(36).substring(2, 15)
   );
+};
+
+// Function to download profile picture and upload to Firebase Storage
+const uploadProfilePictureToStorage = async (photoURL, userId) => {
+  if (!photoURL) return null;
+  
+  try {
+    // Download the image from Google
+    const response = await fetch(photoURL);
+    if (!response.ok) {
+      console.warn("Failed to fetch profile picture:", response.statusText);
+      return null;
+    }
+    
+    const blob = await response.blob();
+    
+    // Create a reference to store the image in Firebase Storage
+    const imageRef = ref(storage, `profile-pictures/${userId}.jpg`);
+    
+    // Upload the image
+    await uploadBytes(imageRef, blob);
+    
+    // Get the download URL
+    const downloadURL = await getDownloadURL(imageRef);
+    
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading profile picture to storage:", error);
+    return null;
+  }
 };
 
 export default function Coaches() {
@@ -108,6 +139,9 @@ export default function Coaches() {
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
+        // Upload profile picture to Firebase Storage if available
+        const uploadedPhotoURL = await uploadProfilePictureToStorage(user.photoURL, user.uid);
+        
         // Current user is not in coaches list, add them
         await addDoc(coachesRef, {
           email: user.email.toLowerCase(),
@@ -116,6 +150,7 @@ export default function Coaches() {
           addedBy: user.uid,
           addedByName: user.displayName || user.email,
           isOwner: true, // Mark as team owner/creator
+          photoURL: uploadedPhotoURL, // Use uploaded Storage URL
         });
       }
     } catch (error) {
@@ -246,14 +281,17 @@ export default function Coaches() {
     if (!newMessage.trim() || !teamId) return;
 
     try {
+      // Find the current user's coach record to get their saved photo
+      const currentUserCoach = coaches.find(coach => coach.userId === user.uid);
+      
       const messagesRef = collection(db, "teams", teamId, "messages");
       await addDoc(messagesRef, {
         text: newMessage.trim(),
         createdAt: new Date(),
         userId: user.uid,
         userEmail: user.email,
-        userName: user.displayName || user.email?.split("@")[0] || "User",
-        userPhotoURL: user.photoURL || null,
+        userName: currentUserCoach?.name || user.displayName || user.email?.split("@")[0] || "User",
+        userPhotoURL: currentUserCoach?.photoURL || user.photoURL || null,
       });
 
       setNewMessage("");
@@ -405,13 +443,21 @@ export default function Coaches() {
                           className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-600"
                         >
                           <div className="flex items-center space-x-3">
-                            <div
-                              className={`w-8 h-8 ${getUserColor(
-                                coach.email
-                              )} rounded-full flex items-center justify-center text-white text-sm font-semibold`}
-                            >
-                              {coach.name.charAt(0).toUpperCase()}
-                            </div>
+                            {coach.photoURL ? (
+                              <img
+                                src={coach.photoURL}
+                                alt={coach.name}
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div
+                                className={`w-8 h-8 ${getUserColor(
+                                  coach.email
+                                )} rounded-full flex items-center justify-center text-white text-sm font-semibold`}
+                              >
+                                {coach.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                             <div>
                               <div className="font-medium text-gray-900 dark:text-white text-sm">
                                 {coach.name}
@@ -426,7 +472,7 @@ export default function Coaches() {
                               </div>
                             </div>
                           </div>
-                          {coach.email !== user.email && (
+                          {coach.email !== user.email && !coach.isOwner && (
                             <button
                               onClick={() => handleRemoveCoach(coach.id)}
                               className="p-1 text-red-400 hover:text-red-600 dark:hover:text-red-300 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
