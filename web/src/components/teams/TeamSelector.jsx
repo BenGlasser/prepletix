@@ -40,13 +40,13 @@ export default function TeamSelector() {
       <div className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center space-x-3 px-3 py-2 bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-300 dark:border-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/95 transition-all duration-200 min-w-[140px] sm:min-w-[180px] md:min-w-[200px] shadow-sm"
+          className="flex items-center space-x-2 px-3 py-2 bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-300 dark:border-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/95 transition-all duration-200 shadow-sm"
         >
           <div className="flex-1 text-left">
             <div className="text-sm font-medium text-gray-900 dark:text-white">
               {currentTeam?.name || "Select Team"}
               {currentTeam && (
-                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 font-normal">
+                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 font-normal hidden sm:inline">
                   {currentTeam.getSeasonDisplay
                     ? currentTeam.getSeasonDisplay()
                     : `${currentTeam.season?.period || "Unknown"} ${
@@ -115,10 +115,14 @@ export default function TeamSelector() {
 
             <button
               onClick={handleCreateTeam}
-              className="w-full flex items-center space-x-3 px-4 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200 text-primary-600 dark:text-primary-400"
+              className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200"
             >
-              <PlusIcon className="w-4 h-4" />
-              <span className="text-sm font-medium">Create New Team</span>
+              <div>
+                <div className="text-sm font-medium text-primary-600 dark:text-primary-400">
+                  Create New Team
+                </div>
+              </div>
+              <PlusIcon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
             </button>
           </div>
         </div>

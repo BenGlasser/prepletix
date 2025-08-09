@@ -85,8 +85,11 @@ export default function ThemeDropdown() {
       </button>
 
       {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-300 dark:border-gray-700/50 backdrop-blur-sm z-50">
+      <div className={`absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-300 dark:border-gray-700/50 backdrop-blur-sm z-50 transition-all duration-300 ease-out origin-top ${
+        isOpen 
+          ? 'opacity-100 scale-y-100 scale-x-100 translate-y-0' 
+          : 'opacity-0 scale-y-0 scale-x-100 -translate-y-2 pointer-events-none'
+      }`}>
           <div className="p-2">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-3 py-2 uppercase tracking-wide">
               Theme Preference
@@ -125,7 +128,6 @@ export default function ThemeDropdown() {
             ))}
           </div>
         </div>
-      )}
     </div>
   );
 }

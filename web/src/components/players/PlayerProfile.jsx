@@ -35,7 +35,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 export default function PlayerProfile({ player, onClose, onDelete }) {
-  const [openSections, setOpenSections] = useState(new Set(["contact"])); // Start with contact info open
+  const [openSections, setOpenSections] = useState(new Set([])); // Start with all cards closed
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
   const [isAddingNote, setIsAddingNote] = useState(false);
@@ -314,10 +314,10 @@ export default function PlayerProfile({ player, onClose, onDelete }) {
   }, [openSections, player.id, loadAttendanceHistory]);
 
   const sections = [
-    { id: "contact", label: "Contact Info", icon: PhoneIcon },
-    { id: "medical", label: "Medical Info", icon: HeartIcon },
-    { id: "notes", label: "Notes", icon: DocumentTextIcon },
     { id: "attendance", label: "Attendance", icon: CalendarDaysIcon },
+    { id: "notes", label: "Notes", icon: DocumentTextIcon },
+    { id: "medical", label: "Medical Info", icon: HeartIcon },
+    { id: "contact", label: "Contact Info", icon: PhoneIcon },
   ];
 
   const toggleSection = (sectionId) => {
@@ -462,32 +462,32 @@ export default function PlayerProfile({ player, onClose, onDelete }) {
               <>
                 {/* Attendance Stats */}
                 {attendanceRecords.length > 0 && (
-                  <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-6 mb-6">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-4">
+                  <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-3 sm:mb-4 text-sm sm:text-base">
                       Attendance Summary
                     </h4>
-                    <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                       <div>
-                        <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                        <div className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400">
                           {getAttendanceStats().rate}%
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                           Attendance Rate
                         </div>
                       </div>
                       <div>
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                           {getAttendanceStats().present}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                           Present
                         </div>
                       </div>
                       <div>
-                        <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-600 dark:text-gray-400">
                           {getAttendanceStats().total}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                           Total Events
                         </div>
                       </div>
@@ -501,7 +501,7 @@ export default function PlayerProfile({ player, onClose, onDelete }) {
                     {attendanceRecords.map((record) => (
                       <div
                         key={record.id}
-                        className="flex justify-between items-center p-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl"
+                        className="flex flex-col sm:flex-row justify-between sm:items-center p-3 sm:p-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl gap-2 sm:gap-0"
                       >
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">
@@ -517,7 +517,7 @@ export default function PlayerProfile({ player, onClose, onDelete }) {
                           )}
                         </div>
                         <span
-                          className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                          className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium self-end sm:self-center ${
                             record.status === "present"
                               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
                               : record.status === "absent"
@@ -584,7 +584,7 @@ export default function PlayerProfile({ player, onClose, onDelete }) {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <Input
                       placeholder="Contact Name"
                       value={contact.name || ""}
@@ -912,11 +912,14 @@ export default function PlayerProfile({ player, onClose, onDelete }) {
     <div className="h-full p-6">
       <div className="max-w-4xl mx-auto min-h-full">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700/50 p-6 mb-6">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center space-x-6">
+        <div className="bg-white dark:bg-gray-800/95 backdrop-blur-md rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700/50 p-3 sm:p-5 mb-6">
+          {/* Mobile: Compact layout with buttons in top-right */}
+          <div className="sm:hidden">
+            {/* Top row: Photo, Name/Jersey, Buttons */}
+            <div className="flex items-start gap-3">
+              {/* Photo on left */}
               <div
-                className="w-24 h-24 bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 rounded-2xl flex items-center justify-center shadow-lg cursor-pointer relative group/photo"
+                className="w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 rounded-xl flex items-center justify-center shadow-lg cursor-pointer relative group/photo flex-shrink-0"
                 onClick={handlePhotoClick}
                 title="Tap to take photo"
               >
@@ -924,66 +927,138 @@ export default function PlayerProfile({ player, onClose, onDelete }) {
                   <img
                     src={currentPhotoUrl}
                     alt={player.name}
-                    className="w-24 h-24 rounded-2xl object-cover"
+                    className="w-12 h-12 rounded-xl object-cover"
                   />
                 ) : (
-                  <span className="text-primary-600 dark:text-primary-400 font-bold text-3xl">
+                  <span className="text-primary-600 dark:text-primary-400 font-bold text-sm">
                     {player.name
                       .split(" ")
                       .map((n) => n[0])
                       .join("")}
                   </span>
                 )}
-
                 {/* Camera overlay */}
-                <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity duration-200">
-                  {uploadingPhoto ? (
-                    <CameraIcon className="w-6 h-6 text-white" />
-                  ) : (
-                    <CameraIcon className="w-6 h-6 text-white" />
-                  )}
+                <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity duration-200">
+                  <CameraIcon className="w-3 h-3 text-white" />
                 </div>
-
                 {/* Scan line animation during upload */}
                 {uploadingPhoto && (
-                  <div className="absolute inset-0 rounded-2xl overflow-hidden">
-                    {/* Darker overlay */}
+                  <div className="absolute inset-0 rounded-xl overflow-hidden">
                     <div className="absolute inset-0 bg-black/40"></div>
-                    {/* Scanning line */}
                     <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-90 animate-scan-line"></div>
-                    {/* Subtle scanning overlay */}
+                  </div>
+                )}
+              </div>
+              
+              {/* Name and Jersey stacked in middle */}
+              <div className="flex-1 min-w-0">
+                <input
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  onBlur={(e) => handleInputBlur("name", e.target.value)}
+                  placeholder="Player Name"
+                  className="w-full text-base font-bold bg-transparent border-0 outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 mb-1"
+                />
+                <input
+                  type="number"
+                  value={formData.jerseyNumber}
+                  onChange={(e) => handleInputChange("jerseyNumber", e.target.value)}
+                  onBlur={(e) => handleInputBlur("jerseyNumber", e.target.value)}
+                  placeholder="25"
+                  className="text-lg text-primary-600 dark:text-primary-400 font-bold bg-transparent border-0 outline-none placeholder-gray-400 dark:placeholder-gray-500"
+                />
+              </div>
+              
+              {/* Action buttons in top-right */}
+              <div className="flex space-x-1 flex-shrink-0">
+                <button
+                  onClick={onDelete}
+                  className="bg-red-600 hover:bg-red-700 text-white p-1 rounded transition-colors duration-200"
+                  title="Delete Player"
+                >
+                  <TrashIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600 text-white p-1 rounded transition-colors duration-200"
+                  title="Go Back"
+                >
+                  <ArrowLeftIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Bottom row: Medical badges */}
+            {(formData.medicalInfo?.allergies?.length > 0 || formData.medicalInfo?.medications?.length > 0) && (
+              <div className="flex gap-1 mt-2 ml-15">
+                {formData.medicalInfo?.allergies?.length > 0 && (
+                  <span className="inline-block px-1.5 py-0.5 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded font-medium">
+                    A{formData.medicalInfo.allergies.length}
+                  </span>
+                )}
+                {formData.medicalInfo?.medications?.length > 0 && (
+                  <span className="inline-block px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded font-medium">
+                    M{formData.medicalInfo.medications.length}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Desktop: Original layout */}
+          <div className="hidden sm:flex justify-between items-start gap-4">
+            <div className="flex items-center space-x-6 w-full">
+              <div
+                className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 rounded-2xl flex items-center justify-center shadow-lg cursor-pointer relative group/photo flex-shrink-0"
+                onClick={handlePhotoClick}
+                title="Tap to take photo"
+              >
+                {currentPhotoUrl ? (
+                  <img
+                    src={currentPhotoUrl}
+                    alt={player.name}
+                    className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover"
+                  />
+                ) : (
+                  <span className="text-primary-600 dark:text-primary-400 font-bold text-2xl md:text-3xl">
+                    {player.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </span>
+                )}
+                <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity duration-200">
+                  <CameraIcon className="w-6 h-6 text-white" />
+                </div>
+                {uploadingPhoto && (
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                    <div className="absolute inset-0 bg-black/40"></div>
+                    <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-90 animate-scan-line"></div>
                     <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 via-transparent to-blue-500/10"></div>
                   </div>
                 )}
               </div>
-              <div className="flex-1">
-                <div className="mb-4">
-                  <Input
+              <div className="flex-1 text-left">
+                <div className="mb-3">
+                  <input
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
                     onBlur={(e) => handleInputBlur("name", e.target.value)}
                     placeholder="Player Name"
-                    className="text-3xl font-bold bg-transparent border-0 border-b-2 border-transparent hover:border-gray-300 focus:border-primary-500 rounded-none px-0 py-1"
-                    icon={UserIcon}
+                    className="w-full text-2xl md:text-3xl font-bold bg-transparent border-0 outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   />
                 </div>
-                <div className="flex items-center space-x-2 mb-4">
-                  <Input
+                <div className="flex items-center space-x-2 mb-3">
+                  <input
                     type="number"
                     value={formData.jerseyNumber}
-                    onChange={(e) =>
-                      handleInputChange("jerseyNumber", e.target.value)
-                    }
-                    onBlur={(e) =>
-                      handleInputBlur("jerseyNumber", e.target.value)
-                    }
-                    placeholder="Jersey #"
-                    className="text-xl text-primary-600 dark:text-primary-400 font-semibold bg-transparent border-0 border-b-2 border-transparent hover:border-gray-300 focus:border-primary-500 rounded-none px-0 py-1 w-24"
-                    icon={HashtagIcon}
+                    onChange={(e) => handleInputChange("jerseyNumber", e.target.value)}
+                    onBlur={(e) => handleInputBlur("jerseyNumber", e.target.value)}
+                    placeholder="25"
+                    className="w-24 text-xl text-primary-600 dark:text-primary-400 font-semibold bg-transparent border-0 outline-none placeholder-gray-400 dark:placeholder-gray-500"
                   />
                 </div>
-                {/* Alert badges */}
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap gap-2">
                   {formData.medicalInfo?.allergies?.length > 0 && (
                     <span className="inline-block px-3 py-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full font-medium">
                       Has Allergies ({formData.medicalInfo.allergies.length})
@@ -997,18 +1072,17 @@ export default function PlayerProfile({ player, onClose, onDelete }) {
                 </div>
               </div>
             </div>
-
-            <div className="flex space-x-3">
+            <div className="flex space-x-3 flex-shrink-0">
               <button
                 onClick={onDelete}
-                className="bg-gradient-to-r from-red-600 to-red-700 text-white p-3 rounded-xl hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg shadow-red-600/25"
+                className="bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-lg transition-colors duration-200"
                 title="Delete Player"
               >
                 <TrashIcon className="w-5 h-5" />
               </button>
               <button
                 onClick={onClose}
-                className="bg-gray-500 text-white p-3 rounded-xl hover:bg-gray-600 transition-all duration-200 shadow-lg"
+                className="bg-gray-600 hover:bg-gray-700 dark:bg-gray-500 dark:hover:bg-gray-600 text-white p-2.5 rounded-lg transition-colors duration-200"
                 title="Go Back"
               >
                 <ArrowLeftIcon className="w-5 h-5" />

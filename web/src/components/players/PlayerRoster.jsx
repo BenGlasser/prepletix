@@ -253,8 +253,11 @@ export default function PlayerRoster() {
   if (teamLoading || loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500 dark:text-gray-400">
-          Loading players...
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <div className="text-gray-500 dark:text-gray-400">
+            Loading players...
+          </div>
         </div>
       </div>
     );
@@ -277,22 +280,22 @@ export default function PlayerRoster() {
 
   return (
     <div className="h-full bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="px-6 py-8 min-h-full">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="px-4 sm:px-6 py-6 sm:py-8 min-h-full">
+        <div className="flex justify-between items-center mb-6 sm:mb-8">
+          <div className="flex-1">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
               Team Roster
             </h2>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
               Manage your team players and their information
             </p>
           </div>
           <button
             onClick={handleAddPlayer}
-            className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-3 rounded-2xl hover:from-primary-700 hover:to-primary-800 flex items-center space-x-2 shadow-lg shadow-primary-600/25 transition-all duration-200 hover:scale-105"
+            className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-3 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl hover:from-primary-700 hover:to-primary-800 flex items-center space-x-1 sm:space-x-2 shadow-lg shadow-primary-600/25 transition-all duration-200 hover:scale-105 text-sm sm:text-base flex-shrink-0"
           >
             <svg
-              className="w-5 h-5"
+              className="w-4 h-4 sm:w-5 sm:h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -304,7 +307,8 @@ export default function PlayerRoster() {
                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"
               />
             </svg>
-            <span>Add Player</span>
+            <span className="hidden sm:inline">Add Player</span>
+            <span className="sm:hidden">Add</span>
           </button>
         </div>
 

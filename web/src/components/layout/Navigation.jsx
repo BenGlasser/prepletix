@@ -59,7 +59,7 @@ export default function Navigation({ onToggleSidebar }) {
             </button>
 
             {/* Team Selector */}
-            <div className="sm:ml-6 md:ml-12 lg:ml-40">
+            <div className="sm:ml-8 md:ml-12 lg:ml-8">
               <TeamSelector />
             </div>
           </div>

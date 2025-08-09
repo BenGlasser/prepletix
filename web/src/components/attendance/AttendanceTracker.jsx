@@ -190,8 +190,11 @@ export default function AttendanceTracker() {
       <div className="h-full">
         <div className="flex justify-center items-center h-full">
           <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-200/50 dark:border-gray-700/50">
-            <div className="text-gray-600 dark:text-gray-400">
-              Loading players...
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <div className="text-gray-600 dark:text-gray-400">
+                Loading players...
+              </div>
             </div>
           </div>
         </div>
